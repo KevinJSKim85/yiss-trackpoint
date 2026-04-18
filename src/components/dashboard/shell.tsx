@@ -2,6 +2,7 @@
 
 import { DashboardHeader } from "./header";
 import { DashboardGrid } from "./grid";
+import { HeroBanner } from "./hero-banner";
 
 export function DashboardShell() {
   return (
@@ -12,6 +13,7 @@ export function DashboardShell() {
         }}
       />
       <main className="flex-1">
+        <HeroBanner />
         <DashboardGrid />
       </main>
       <footer className="mx-auto w-full max-w-[1400px] px-5 pb-8 md:px-8">
