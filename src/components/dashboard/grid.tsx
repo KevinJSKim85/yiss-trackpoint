@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import type { LayoutItem, ResponsiveResponsiveLayouts } from "react-grid-layout/legacy";
+import type { LayoutItem, ResponsiveLayouts } from "react-grid-layout/legacy";
 import { useLocalStorage } from "@/lib/storage";
 import { WeatherWidget } from "@/components/widgets/weather";
 import { AirQualityWidget } from "@/components/widgets/air-quality";
@@ -209,8 +209,8 @@ export function DashboardGrid({ editMode }: { editMode: boolean }) {
           isDraggable={editMode}
           isResizable={editMode}
           compactType="vertical"
-          onLayoutChange={(_current: LayoutItem[], all: ResponsiveLayouts) => {
-            if (editMode) setResponsiveLayouts(all);
+          onLayoutChange={(_current, all) => {
+            if (editMode) setResponsiveLayouts(all as ResponsiveLayouts);
           }}
         >
           {items.map((k) => (
