@@ -1,0 +1,266 @@
+@import "tailwindcss";
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
+
+:root {
+  --ink: #0b1e3f;
+  --ink-soft: #14315f;
+  --ink-muted: #5a6478;
+  --parchment: #f6f1e6;
+  --parchment-soft: #fbf8f1;
+  --porcelain: #ffffff;
+  --gold: #b8923a;
+  --gold-soft: #e3c87c;
+  --gold-ink: #6a4f16;
+  --crimson: #9a2b2b;
+  --sage: #5d7a5a;
+  --line: rgba(11, 30, 63, 0.1);
+  --line-strong: rgba(11, 30, 63, 0.18);
+  --ring: rgba(184, 146, 58, 0.35);
+  --shadow-sm: 0 1px 2px rgba(11, 30, 63, 0.06);
+  --shadow-md: 0 8px 24px -12px rgba(11, 30, 63, 0.18), 0 2px 4px rgba(11, 30, 63, 0.04);
+  --shadow-lg: 0 24px 60px -30px rgba(11, 30, 63, 0.35);
+}
+
+.dark {
+  --ink: #f4efe3;
+  --ink-soft: #d8cfb8;
+  --ink-muted: #8a93a6;
+  --parchment: #070e1c;
+  --parchment-soft: #0b1528;
+  --porcelain: #0f1b33;
+  --gold: #d4ac4f;
+  --gold-soft: #b8923a;
+  --gold-ink: #f5e3b8;
+  --line: rgba(244, 239, 227, 0.08);
+  --line-strong: rgba(244, 239, 227, 0.16);
+  --ring: rgba(212, 172, 79, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 30px -14px rgba(0, 0, 0, 0.55), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 30px 60px -24px rgba(0, 0, 0, 0.7);
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-parchment: var(--parchment);
+  --color-parchment-soft: var(--parchment-soft);
+  --color-porcelain: var(--porcelain);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-ink: var(--gold-ink);
+  --color-crimson: var(--crimson);
+  --color-sage: var(--sage);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ring: var(--ring);
+  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains);
+}
+
+html,
+body {
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgba(184, 146, 58, 0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(11, 30, 63, 0.06), transparent 55%);
+  background-attachment: fixed;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(900px 500px at 85% -10%, rgba(212, 172, 79, 0.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(20, 49, 95, 0.25), transparent 55%);
+}
+
+.font-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-feature-settings: "ss01", "ss02", "case";
+  letter-spacing: -0.01em;
+}
+
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+::selection {
+  background: rgba(184, 146, 58, 0.35);
+  color: var(--ink);
+}
+
+.card-surface {
+  background: var(--porcelain);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  border-radius: 18px;
+  position: relative;
+}
+
+.card-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 30%);
+  opacity: 0.6;
+  mix-blend-mode: soft-light;
+}
+
+.dark .card-surface::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%);
+}
+
+.card-hover {
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 220ms ease;
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--line-strong);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--parchment-soft);
+  color: var(--ink-soft);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+}
+
+.rule-gold {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.55;
+}
+
+/* React Grid Layout overrides */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(184, 146, 58, 0.15) !important;
+  border: 1.5px dashed var(--gold) !important;
+  border-radius: 18px !important;
+  opacity: 1 !important;
+  transition: all 120ms ease;
+}
+
+.react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 0.35;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 30 !important;
+  cursor: grabbing;
+}
+
+.react-grid-item.react-draggable-dragging .card-surface {
+  box-shadow: var(--shadow-lg);
+  transform: scale(1.015);
+}
+
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.edit-mode .card-surface {
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 1px var(--ring), var(--shadow-sm);
+}
+
+.edit-mode .card-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(184, 146, 58, 0.18) 1px,
+    transparent 0
+  );
+  background-size: 8px 8px;
+  opacity: 0.18;
+}
+
+.widget-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.widget-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.widget-scroll::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+}
+.widget-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes ink-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ink-fade {
+  animation: ink-fade 440ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.paper-texture {
+  background-image: radial-gradient(
+      rgba(11, 30, 63, 0.035) 1px,
+      transparent 1px
+    ),
+    radial-gradient(rgba(11, 30, 63, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px, 11px 11px;
+  background-position: 0 0, 12px 5px;
+}
+
+.dark .paper-texture {
+  background-image: radial-gradient(
+      rgba(244, 239, 227, 0.04) 1px,
+      transparent 1px
+    ),
+    radial-gradient(rgba(244, 239, 227, 0.03) 1px, transparent 1px);
+}
