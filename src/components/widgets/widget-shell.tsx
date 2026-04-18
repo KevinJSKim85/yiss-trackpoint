@@ -36,7 +36,7 @@ export function WidgetShell({
       <header className="drag-handle flex items-start justify-between gap-3 px-4 pt-3.5 pb-2.5">
         <div className="flex min-w-0 items-start gap-2">
           <div
-            className="mt-0.5 -ml-1 rounded px-0.5 py-0.5 text-ink-muted opacity-30 transition hover:bg-[color:var(--parchment-soft)] hover:opacity-100 group-hover/widget:opacity-70"
+            className="mt-0.5 -ml-1 hidden rounded px-0.5 py-0.5 text-ink-muted opacity-30 transition hover:bg-[color:var(--parchment-soft)] hover:opacity-100 group-hover/widget:opacity-70 lg:block"
             aria-hidden
           >
             <GripVertical className="h-4 w-4" />

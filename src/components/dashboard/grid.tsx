@@ -78,6 +78,10 @@ function sanitize(order: WidgetKey[]): WidgetKey[] {
 }
 
 const DRAG_THRESHOLD = 6;
+// Drag is only enabled at the 3-column layout (lg). Below this, touch users
+// on phones/tablets would accidentally trigger drags while scrolling because
+// our pointerdown+pointermove pattern picks up any 6px swipe as a drag.
+const DRAG_ENABLED_QUERY = "(min-width: 1024px)";
 
 export function DashboardGrid() {
   const [storedOrder, setStoredOrder, hydrated] = useLocalStorage<WidgetKey[]>(
@@ -90,6 +94,7 @@ export function DashboardGrid() {
   const order = sanitize(storedOrder);
   const [dragKey, setDragKey] = useState<WidgetKey | null>(null);
   const [hoverKey, setHoverKey] = useState<WidgetKey | null>(null);
+  const hoverKeyRef = useRef<WidgetKey | null>(null);
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(
     null,
   );
@@ -108,6 +113,35 @@ export function DashboardGrid() {
     sourceEl: HTMLElement;
   } | null>(null);
 
+  const [dragEnabled, setDragEnabled] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia(DRAG_ENABLED_QUERY);
+    const apply = () => setDragEnabled(mql.matches);
+    apply();
+    mql.addEventListener("change", apply);
+    return () => mql.removeEventListener("change", apply);
+  }, []);
+
+  // If a user is mid-drag and rapidly shrinks the viewport below lg,
+  // endDrag here ensures stale ghost/hover state gets cleared. Prevents
+  // 'stuck widget' bugs when resizing flaps across the breakpoint.
+  useEffect(() => {
+    if (!dragEnabled && dragStateRef.current) {
+      const state = dragStateRef.current;
+      dragStateRef.current = null;
+      hoverKeyRef.current = null;
+      setDragKey(null);
+      setHoverKey(null);
+      setGhostPos(null);
+      setGhostSize(null);
+      // Restore pointer-events in case we were in the middle of a move.
+      try {
+        state.sourceEl.style.pointerEvents = "";
+      } catch {}
+    }
+  }, [dragEnabled]);
+
   useEffect(() => {
     (window as unknown as { __yissReset?: () => void }).__yissReset = () => {
       try {
@@ -119,6 +153,7 @@ export function DashboardGrid() {
 
   const endDrag = useCallback(() => {
     dragStateRef.current = null;
+    hoverKeyRef.current = null;
     setDragKey(null);
     setHoverKey(null);
     setGhostPos(null);
@@ -128,6 +163,15 @@ export function DashboardGrid() {
   const onHandlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>, key: WidgetKey) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
+      // Belt-and-suspenders: also check at call time. WidgetDropTarget
+      // doesn't attach the listener when below lg, but if the breakpoint
+      // changed mid-interaction this guards against stale capture.
+      if (
+        typeof window !== "undefined" &&
+        !window.matchMedia(DRAG_ENABLED_QUERY).matches
+      ) {
+        return;
+      }
       const cell = (e.currentTarget.closest("[data-widget-cell]") ??
         e.currentTarget) as HTMLElement;
       const rect = cell.getBoundingClientRect();
@@ -145,6 +189,9 @@ export function DashboardGrid() {
     [],
   );
 
+  // Window-level pointer listeners run only while a drag state exists.
+  // hoverKeyRef lets us read the latest hover without re-attaching on every
+  // hover change, which previously caused listener churn during rapid moves.
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
       const s = dragStateRef.current;
@@ -169,28 +216,31 @@ export function DashboardGrid() {
       const targetKey =
         (targetCell?.getAttribute("data-widget-key") as WidgetKey | null) ??
         null;
-      setHoverKey(
+      const nextHover =
         targetKey && ALL_KEYS.has(targetKey) && targetKey !== s.key
           ? targetKey
-          : null,
-      );
+          : null;
+      if (nextHover !== hoverKeyRef.current) {
+        hoverKeyRef.current = nextHover;
+        setHoverKey(nextHover);
+      }
     };
     const onUp = () => {
       const s = dragStateRef.current;
       if (!s) return;
       if (s.started) {
-        setStoredOrder((prev) => {
-          const list = sanitize(prev);
-          const from = list.indexOf(s.key);
-          if (from < 0) return prev;
-          const currentHover = hoverKey;
-          if (!currentHover || currentHover === s.key) return prev;
-          const to = list.indexOf(currentHover);
-          if (to < 0) return prev;
-          const next = [...list];
-          [next[from], next[to]] = [next[to], next[from]];
-          return next;
-        });
+        const landed = hoverKeyRef.current;
+        if (landed && landed !== s.key) {
+          setStoredOrder((prev) => {
+            const list = sanitize(prev);
+            const from = list.indexOf(s.key);
+            const to = list.indexOf(landed);
+            if (from < 0 || to < 0) return prev;
+            const next = [...list];
+            [next[from], next[to]] = [next[to], next[from]];
+            return next;
+          });
+        }
       }
       endDrag();
     };
@@ -203,7 +253,7 @@ export function DashboardGrid() {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [hoverKey, endDrag, setStoredOrder]);
+  }, [endDrag, setStoredOrder]);
 
   if (!mounted || !hydrated) {
     return (
@@ -245,6 +295,7 @@ export function DashboardGrid() {
               )}
               <WidgetDropTarget
                 widgetKey={key}
+                enabled={dragEnabled}
                 onHandlePointerDown={onHandlePointerDown}
               >
                 {WIDGETS[key]()}
@@ -274,10 +325,12 @@ export function DashboardGrid() {
 
 function WidgetDropTarget({
   widgetKey,
+  enabled,
   children,
   onHandlePointerDown,
 }: {
   widgetKey: WidgetKey;
+  enabled: boolean;
   children: React.ReactNode;
   onHandlePointerDown: (
     e: React.PointerEvent<HTMLElement>,
@@ -286,6 +339,10 @@ function WidgetDropTarget({
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    // Only wire pointerdown on the drag handle when drag is enabled
+    // (lg+ layout). On mobile/tablet, no listener = no accidental drag
+    // hijacking during scroll.
+    if (!enabled) return;
     const root = ref.current;
     if (!root) return;
     const handles = root.querySelectorAll<HTMLElement>(".drag-handle");
@@ -301,7 +358,7 @@ function WidgetDropTarget({
       listeners.push(() => h.removeEventListener("pointerdown", fn));
     });
     return () => listeners.forEach((l) => l());
-  }, [widgetKey, onHandlePointerDown]);
+  }, [widgetKey, onHandlePointerDown, enabled]);
   return (
     <div ref={ref} className="h-full w-full">
       {children}

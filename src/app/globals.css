@@ -186,11 +186,14 @@ body {
   transform: scale(1.015);
 }
 
-.drag-handle {
-  cursor: grab;
-}
-.drag-handle:active {
-  cursor: grabbing;
+/* Drag cursors only appear at lg+ where puzzle swap is enabled. */
+@media (min-width: 1024px) {
+  .drag-handle {
+    cursor: grab;
+  }
+  .drag-handle:active {
+    cursor: grabbing;
+  }
 }
 
 .edit-mode .card-surface {
