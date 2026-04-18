@@ -1,11 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
-import type { LayoutItem, ResponsiveLayouts } from "react-grid-layout/legacy";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/lib/storage";
-import { WeatherWidget } from "@/components/widgets/weather";
-import { AirQualityWidget } from "@/components/widgets/air-quality";
+import { cn } from "@/lib/utils";
 import { CountdownWidget } from "@/components/widgets/countdown";
 import { GmailWidget } from "@/components/widgets/gmail";
 import { CalendarWidget } from "@/components/widgets/calendar";
@@ -19,29 +16,7 @@ import { LunchWidget } from "@/components/widgets/lunch";
 import { ClubsWidget } from "@/components/widgets/clubs";
 import { QuickLinksBoard } from "@/components/widgets/quick-links";
 
-const ResponsiveGridLayout = dynamic(
-  async () => {
-    const mod = await import("react-grid-layout/legacy");
-    return mod.WidthProvider(mod.Responsive);
-  },
-  {
-    ssr: false,
-    loading: () => (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-[260px] animate-pulse rounded-2xl bg-[color:var(--line)]/40"
-          />
-        ))}
-      </div>
-    ),
-  },
-);
-
 type WidgetKey =
-  | "weather"
-  | "aqi"
   | "countdown"
   | "gmail"
   | "calendar"
@@ -56,8 +31,6 @@ type WidgetKey =
   | "quick-links";
 
 const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
-  weather: () => <WeatherWidget />,
-  aqi: () => <AirQualityWidget />,
   countdown: () => <CountdownWidget />,
   gmail: () => <GmailWidget />,
   calendar: () => <CalendarWidget />,
@@ -72,50 +45,7 @@ const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
   "quick-links": () => <QuickLinksBoard />,
 };
 
-const STANDARD_W = 3;
-const STANDARD_H = 8;
-
-function buildLayout(
-  order: WidgetKey[],
-  cols: number,
-  qlSpan: number,
-): LayoutItem[] {
-  const widgets = order.filter((k) => k !== "quick-links");
-  const out: LayoutItem[] = [];
-  const perRow = Math.max(1, Math.floor(cols / STANDARD_W));
-  widgets.forEach((k, i) => {
-    const x = (i % perRow) * STANDARD_W;
-    const y = Math.floor(i / perRow) * STANDARD_H;
-    out.push({
-      i: k,
-      x,
-      y,
-      w: STANDARD_W,
-      h: STANDARD_H,
-      minW: STANDARD_W,
-      minH: STANDARD_H,
-      maxW: STANDARD_W,
-      maxH: STANDARD_H,
-    });
-  });
-  const lastY = Math.ceil(widgets.length / perRow) * STANDARD_H;
-  out.push({
-    i: "quick-links",
-    x: 0,
-    y: lastY,
-    w: qlSpan,
-    h: STANDARD_H,
-    minW: qlSpan,
-    minH: STANDARD_H,
-    maxW: qlSpan,
-    maxH: STANDARD_H,
-  });
-  return out;
-}
-
 const DEFAULT_ORDER: WidgetKey[] = [
-  "weather",
-  "aqi",
   "countdown",
   "calendar",
   "gmail",
@@ -130,152 +60,251 @@ const DEFAULT_ORDER: WidgetKey[] = [
   "quick-links",
 ];
 
-function buildMobile(order: WidgetKey[], cols: number): LayoutItem[] {
-  // All items full-width (cols wide), uniform height — stacked vertically.
-  return order.map((k, i) => ({
-    i: k,
-    x: 0,
-    y: i * STANDARD_H,
-    w: cols,
-    h: STANDARD_H,
-    minW: cols,
-    minH: STANDARD_H,
-    maxW: cols,
-    maxH: STANDARD_H,
-  }));
+const ALL_KEYS = new Set<WidgetKey>(DEFAULT_ORDER);
+
+function sanitize(order: WidgetKey[]): WidgetKey[] {
+  const seen = new Set<WidgetKey>();
+  const out: WidgetKey[] = [];
+  for (const k of order) {
+    if (ALL_KEYS.has(k) && !seen.has(k)) {
+      seen.add(k);
+      out.push(k);
+    }
+  }
+  for (const k of DEFAULT_ORDER) {
+    if (!seen.has(k)) out.push(k);
+  }
+  return out;
 }
 
-function buildUniform(order: WidgetKey[], cols: number): LayoutItem[] {
-  // Every panel is exactly STANDARD_W × STANDARD_H. Quick Links is no exception.
-  const perRow = Math.max(1, Math.floor(cols / STANDARD_W));
-  return order.map((k, i) => ({
-    i: k,
-    x: (i % perRow) * STANDARD_W,
-    y: Math.floor(i / perRow) * STANDARD_H,
-    w: STANDARD_W,
-    h: STANDARD_H,
-    minW: STANDARD_W,
-    minH: STANDARD_H,
-    maxW: STANDARD_W,
-    maxH: STANDARD_H,
-  }));
-}
-
-const BREAKPOINT_COLS = { lg: 12, md: 12, sm: 6, xs: 2 } as const;
-type BP = keyof typeof BREAKPOINT_COLS;
-
-// Re-pack widgets into a top-left-filled grid — like a 바둑판 / go board.
-// Sort current positions by (y, x) to preserve the user's dropped order,
-// then snap each item to its sequential (x, y) slot with no gaps.
-function packBreakpoint(
-  bp: BP,
-  layout: readonly LayoutItem[],
-): LayoutItem[] {
-  const cols = BREAKPOINT_COLS[bp];
-  const w = bp === "xs" ? cols : STANDARD_W;
-  const perRow = Math.max(1, Math.floor(cols / w));
-  const sorted = [...layout].sort((a, b) => a.y - b.y || a.x - b.x);
-  return sorted.map((item, i) => ({
-    ...item,
-    x: (i % perRow) * w,
-    y: Math.floor(i / perRow) * STANDARD_H,
-    w,
-    h: STANDARD_H,
-    minW: w,
-    minH: STANDARD_H,
-    maxW: w,
-    maxH: STANDARD_H,
-  }));
-}
-
-function packAll(layouts: ResponsiveLayouts): ResponsiveLayouts {
-  return {
-    lg: packBreakpoint("lg", layouts.lg ?? []),
-    md: packBreakpoint("md", layouts.md ?? []),
-    sm: packBreakpoint("sm", layouts.sm ?? []),
-    xs: packBreakpoint("xs", layouts.xs ?? []),
-  };
-}
-
-const DEFAULT_LAYOUTS: ResponsiveLayouts = {
-  lg: buildUniform(DEFAULT_ORDER, 12),
-  md: buildUniform(DEFAULT_ORDER, 12),
-  sm: buildUniform(DEFAULT_ORDER, 6),
-  xs: buildMobile(DEFAULT_ORDER, 2),
-};
+const DRAG_THRESHOLD = 6;
 
 export function DashboardGrid() {
-  const [layouts, setResponsiveLayouts, hydrated] = useLocalStorage<ResponsiveLayouts>(
-    "yiss-layouts-v3",
-    DEFAULT_LAYOUTS,
+  const [storedOrder, setStoredOrder, hydrated] = useLocalStorage<WidgetKey[]>(
+    "yiss-order-v1",
+    DEFAULT_ORDER,
   );
   const [mounted, setMounted] = useState(false);
-  const [bp, setBp] = useState<BP>("lg");
   useEffect(() => setMounted(true), []);
 
-  // After hydrating from localStorage (or defaults), snap everything to a
-  // tight top-left-packed board. Runs once per session.
-  const [normalized, setNormalized] = useState(false);
-  useEffect(() => {
-    if (!hydrated || normalized) return;
-    setResponsiveLayouts((prev) => packAll(prev));
-    setNormalized(true);
-  }, [hydrated, normalized, setResponsiveLayouts]);
+  const order = sanitize(storedOrder);
+  const [dragKey, setDragKey] = useState<WidgetKey | null>(null);
+  const [hoverKey, setHoverKey] = useState<WidgetKey | null>(null);
+  const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [ghostSize, setGhostSize] = useState<{ w: number; h: number } | null>(
+    null,
+  );
+
+  const dragStateRef = useRef<{
+    key: WidgetKey;
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+    started: boolean;
+    pointerId: number;
+    sourceEl: HTMLElement;
+  } | null>(null);
 
   useEffect(() => {
     (window as unknown as { __yissReset?: () => void }).__yissReset = () => {
       try {
-        localStorage.removeItem("yiss-layouts-v3");
+        localStorage.removeItem("yiss-order-v1");
       } catch {}
-      setResponsiveLayouts(DEFAULT_LAYOUTS);
+      setStoredOrder(DEFAULT_ORDER);
     };
-  }, [setResponsiveLayouts]);
+  }, [setStoredOrder]);
 
-  const items = useMemo(() => DEFAULT_ORDER, []);
+  const endDrag = useCallback(() => {
+    dragStateRef.current = null;
+    setDragKey(null);
+    setHoverKey(null);
+    setGhostPos(null);
+    setGhostSize(null);
+  }, []);
+
+  const onHandlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLElement>, key: WidgetKey) => {
+      if (e.button !== 0 && e.pointerType === "mouse") return;
+      const cell = (e.currentTarget.closest("[data-widget-cell]") ??
+        e.currentTarget) as HTMLElement;
+      const rect = cell.getBoundingClientRect();
+      dragStateRef.current = {
+        key,
+        startX: e.clientX,
+        startY: e.clientY,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        started: false,
+        pointerId: e.pointerId,
+        sourceEl: cell,
+      };
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const s = dragStateRef.current;
+      if (!s) return;
+      const dx = e.clientX - s.startX;
+      const dy = e.clientY - s.startY;
+      if (!s.started) {
+        if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+        const rect = s.sourceEl.getBoundingClientRect();
+        setGhostSize({ w: rect.width, h: rect.height });
+        setDragKey(s.key);
+        s.started = true;
+      }
+      setGhostPos({ x: e.clientX - s.offsetX, y: e.clientY - s.offsetY });
+      const prevPE = s.sourceEl.style.pointerEvents;
+      s.sourceEl.style.pointerEvents = "none";
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      s.sourceEl.style.pointerEvents = prevPE;
+      const targetCell = el?.closest?.(
+        "[data-widget-cell]",
+      ) as HTMLElement | null;
+      const targetKey =
+        (targetCell?.getAttribute("data-widget-key") as WidgetKey | null) ??
+        null;
+      setHoverKey(
+        targetKey && ALL_KEYS.has(targetKey) && targetKey !== s.key
+          ? targetKey
+          : null,
+      );
+    };
+    const onUp = () => {
+      const s = dragStateRef.current;
+      if (!s) return;
+      if (s.started) {
+        setStoredOrder((prev) => {
+          const list = sanitize(prev);
+          const from = list.indexOf(s.key);
+          if (from < 0) return prev;
+          const currentHover = hoverKey;
+          if (!currentHover || currentHover === s.key) return prev;
+          const to = list.indexOf(currentHover);
+          if (to < 0) return prev;
+          const next = [...list];
+          [next[from], next[to]] = [next[to], next[from]];
+          return next;
+        });
+      }
+      endDrag();
+    };
+    const onCancel = () => endDrag();
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+    };
+  }, [hoverKey, endDrag, setStoredOrder]);
 
   if (!mounted || !hydrated) {
     return (
-      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-4 px-5 pb-10 pt-6 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
-        {items.slice(0, 8).map((k) => (
-          <div
-            key={k}
-            className="h-[260px] animate-pulse rounded-2xl bg-[color:var(--line)]/40"
-          />
-        ))}
+      <div className="mx-auto w-full max-w-[1400px] px-4 pb-10 pt-4 md:px-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[360px] animate-pulse rounded-2xl bg-[color:var(--line)]/40"
+            />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mx-auto w-full max-w-[1400px] px-4 pb-12 pt-4 md:px-8">
-        <ResponsiveGridLayout
-          className="layout"
-          layouts={layouts}
-          breakpoints={{ lg: 1200, md: 996, sm: 720, xs: 0 }}
-          cols={BREAKPOINT_COLS}
-          rowHeight={32}
-          margin={[16, 16]}
-          draggableHandle=".drag-handle"
-          isDraggable={true}
-          isResizable={false}
-          compactType="vertical"
-          onBreakpointChange={(next) => setBp(next as BP)}
-          onDragStop={(newLayout) => {
-            const packed = packBreakpoint(bp, newLayout);
-            setResponsiveLayouts({
-              ...layouts,
-              [bp]: packed,
-            } as ResponsiveLayouts);
+    <div className="mx-auto w-full max-w-[1400px] px-4 pb-12 pt-4 md:px-8">
+      <div className="grid auto-rows-[380px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {order.map((key) => {
+          const isDragging = dragKey === key;
+          const isHover = hoverKey === key && dragKey !== key;
+          return (
+            <div
+              key={key}
+              data-widget-cell
+              data-widget-key={key}
+              className={cn(
+                "relative transition-transform duration-200 ease-out",
+                isDragging && "opacity-30",
+                isHover && "scale-[1.02]",
+              )}
+            >
+              {isHover && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-10 rounded-[18px] border-2 border-dashed border-[color:var(--gold)] bg-[color:var(--gold)]/10"
+                />
+              )}
+              <WidgetDropTarget
+                widgetKey={key}
+                onHandlePointerDown={onHandlePointerDown}
+              >
+                {WIDGETS[key]()}
+              </WidgetDropTarget>
+            </div>
+          );
+        })}
+      </div>
+      {dragKey && ghostPos && ghostSize && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed left-0 top-0 z-50"
+          style={{
+            transform: `translate(${ghostPos.x}px, ${ghostPos.y}px)`,
+            width: ghostSize.w,
+            height: ghostSize.h,
           }}
         >
-          {items.map((k) => (
-            <div key={k} className="ink-fade">
-              {WIDGETS[k]()}
-            </div>
-          ))}
-        </ResponsiveGridLayout>
-      </div>
+          <div className="h-full w-full scale-[1.02] opacity-90 shadow-2xl">
+            {WIDGETS[dragKey]()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WidgetDropTarget({
+  widgetKey,
+  children,
+  onHandlePointerDown,
+}: {
+  widgetKey: WidgetKey;
+  children: React.ReactNode;
+  onHandlePointerDown: (
+    e: React.PointerEvent<HTMLElement>,
+    key: WidgetKey,
+  ) => void;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const handles = root.querySelectorAll<HTMLElement>(".drag-handle");
+    const listeners: Array<() => void> = [];
+    handles.forEach((h) => {
+      const fn = (ev: PointerEvent) => {
+        onHandlePointerDown(
+          ev as unknown as React.PointerEvent<HTMLElement>,
+          widgetKey,
+        );
+      };
+      h.addEventListener("pointerdown", fn);
+      listeners.push(() => h.removeEventListener("pointerdown", fn));
+    });
+    return () => listeners.forEach((l) => l());
+  }, [widgetKey, onHandlePointerDown]);
+  return (
+    <div ref={ref} className="h-full w-full">
+      {children}
     </div>
   );
 }
