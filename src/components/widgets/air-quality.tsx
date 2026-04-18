@@ -28,7 +28,7 @@ function band(aqi: number) {
   return { label: "Hazardous", hex: "#3d0d1f", advice: "Avoid all outdoor activity." };
 }
 
-export function AirQualityWidget({ editMode }: { editMode?: boolean }) {
+export function AirQualityWidget() {
   const { data, isLoading, error } = useSWR<AqiPayload>("/api/aqi", fetcher, {
     refreshInterval: 1000 * 60 * 20,
   });
@@ -41,7 +41,7 @@ export function AirQualityWidget({ editMode }: { editMode?: boolean }) {
       title="Air Quality"
       eyebrow="US EPA · Yongsan"
       accent="sage"
-      editMode={editMode}
+
     >
       {isLoading && (
         <div className="flex h-full items-center justify-center text-sm text-ink-muted">

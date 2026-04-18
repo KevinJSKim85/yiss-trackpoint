@@ -25,7 +25,7 @@ const POSTS = [
   },
 ];
 
-export function InstagramYisspnWidget({ editMode }: { editMode?: boolean }) {
+export function InstagramYisspnWidget() {
   return (
     <WidgetShell
       title="@yisspn"
@@ -33,7 +33,7 @@ export function InstagramYisspnWidget({ editMode }: { editMode?: boolean }) {
       accent="crimson"
       href="https://www.instagram.com/yisspn/"
       hrefLabel="Follow"
-      editMode={editMode}
+
       headerExtra={
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] text-ink-muted">
           <InstagramGlyph className="h-3.5 w-3.5" />

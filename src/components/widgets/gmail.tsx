@@ -42,7 +42,7 @@ const SAMPLE = [
   },
 ];
 
-export function GmailWidget({ editMode }: { editMode?: boolean }) {
+export function GmailWidget() {
   const unread = SAMPLE.filter((e) => e.unread).length;
 
   return (
@@ -52,7 +52,7 @@ export function GmailWidget({ editMode }: { editMode?: boolean }) {
       accent="crimson"
       href="https://mail.google.com"
       hrefLabel="Inbox"
-      editMode={editMode}
+
       headerExtra={
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] text-ink-muted">
           <Mail className="h-3.5 w-3.5" />

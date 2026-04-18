@@ -9,13 +9,13 @@ const STATS = [
   { label: "Tardies", value: "1", tone: "warn" },
 ];
 
-export function PowerSchoolWidget({ editMode }: { editMode?: boolean }) {
+export function PowerSchoolWidget() {
   return (
     <WidgetShell
       title="PowerSchool"
       eyebrow="Attendance · Schedule"
       accent="ink"
-      editMode={editMode}
+
     >
       <div className="flex h-full flex-col gap-3">
         <div className="grid grid-cols-3 gap-2">

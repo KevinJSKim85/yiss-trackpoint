@@ -9,7 +9,6 @@ type WidgetShellProps = {
   accent?: "ink" | "gold" | "sage" | "crimson";
   href?: string;
   hrefLabel?: string;
-  editMode?: boolean;
   children: React.ReactNode;
   bodyClassName?: string;
   headerExtra?: React.ReactNode;
@@ -28,20 +27,20 @@ export function WidgetShell({
   accent = "ink",
   href,
   hrefLabel,
-  editMode,
   children,
   bodyClassName,
   headerExtra,
 }: WidgetShellProps) {
   return (
-    <article className="card-surface card-hover flex h-full w-full flex-col overflow-hidden">
-      <header className="flex items-start justify-between gap-3 px-4 pt-3.5 pb-2.5">
-        <div className="flex min-w-0 items-start gap-2.5">
-          {editMode && (
-            <div className="drag-handle mt-0.5 -ml-1 rounded px-1 py-0.5 text-ink-muted hover:bg-[color:var(--parchment-soft)]">
-              <GripVertical className="h-4 w-4" />
-            </div>
-          )}
+    <article className="card-surface card-hover group/widget flex h-full w-full flex-col overflow-hidden">
+      <header className="drag-handle flex items-start justify-between gap-3 px-4 pt-3.5 pb-2.5">
+        <div className="flex min-w-0 items-start gap-2">
+          <div
+            className="mt-0.5 -ml-1 rounded px-0.5 py-0.5 text-ink-muted opacity-30 transition hover:bg-[color:var(--parchment-soft)] hover:opacity-100 group-hover/widget:opacity-70"
+            aria-hidden
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
           <div
             className={cn(
               "relative min-w-0 pl-3 before:absolute before:left-0 before:top-1 before:h-[calc(100%-4px)] before:w-[2px] before:rounded",
@@ -58,7 +57,10 @@ export function WidgetShell({
             </h3>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {headerExtra}
           {href && (
             <a

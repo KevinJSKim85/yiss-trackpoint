@@ -44,7 +44,7 @@ const ICONS: Record<string, { icon: React.ComponentType<{ className?: string }>;
   folder: { icon: Folder, color: "#b8923a" },
 };
 
-export function DriveWidget({ editMode }: { editMode?: boolean }) {
+export function DriveWidget() {
   return (
     <WidgetShell
       title="Recent Drive files"
@@ -52,7 +52,7 @@ export function DriveWidget({ editMode }: { editMode?: boolean }) {
       accent="gold"
       href="https://drive.google.com"
       hrefLabel="Drive"
-      editMode={editMode}
+
     >
       <ul className="space-y-2 text-[12.5px]">
         {FILES.map((f) => {

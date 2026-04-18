@@ -42,7 +42,7 @@ function labelFor(code: number) {
   return "Clouds";
 }
 
-export function WeatherWidget({ editMode }: { editMode?: boolean }) {
+export function WeatherWidget() {
   const { data, error, isLoading } = useSWR<WeatherPayload>(
     "/api/weather",
     fetcher,
@@ -54,7 +54,7 @@ export function WeatherWidget({ editMode }: { editMode?: boolean }) {
       title="Seoul Weather"
       eyebrow="Yongsan · Now"
       accent="gold"
-      editMode={editMode}
+
     >
       {isLoading && <Skeleton />}
       {error && <p className="text-sm text-ink-muted">Could not load weather.</p>}
