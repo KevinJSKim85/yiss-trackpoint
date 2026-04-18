@@ -33,6 +33,11 @@ export const metadata: Metadata = {
     "Guardians",
     "TrackPoint",
   ],
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
