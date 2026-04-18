@@ -47,9 +47,10 @@ export function DashboardHeader({ onResetLayout }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Reset is only useful at lg+ where drag is enabled. Hidden below. */}
           <button
             onClick={onResetLayout}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line-strong)] bg-[color:var(--porcelain)] px-3.5 py-2 text-xs font-medium text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink"
+            className="hidden items-center gap-1.5 rounded-full border border-[color:var(--line-strong)] bg-[color:var(--porcelain)] px-3.5 py-2 text-xs font-medium text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink lg:inline-flex"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reset layout
