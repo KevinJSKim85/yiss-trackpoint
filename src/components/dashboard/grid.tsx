@@ -161,6 +161,42 @@ function buildUniform(order: WidgetKey[], cols: number): LayoutItem[] {
   }));
 }
 
+const BREAKPOINT_COLS = { lg: 12, md: 12, sm: 6, xs: 2 } as const;
+type BP = keyof typeof BREAKPOINT_COLS;
+
+// Re-pack widgets into a top-left-filled grid — like a 바둑판 / go board.
+// Sort current positions by (y, x) to preserve the user's dropped order,
+// then snap each item to its sequential (x, y) slot with no gaps.
+function packBreakpoint(
+  bp: BP,
+  layout: readonly LayoutItem[],
+): LayoutItem[] {
+  const cols = BREAKPOINT_COLS[bp];
+  const w = bp === "xs" ? cols : STANDARD_W;
+  const perRow = Math.max(1, Math.floor(cols / w));
+  const sorted = [...layout].sort((a, b) => a.y - b.y || a.x - b.x);
+  return sorted.map((item, i) => ({
+    ...item,
+    x: (i % perRow) * w,
+    y: Math.floor(i / perRow) * STANDARD_H,
+    w,
+    h: STANDARD_H,
+    minW: w,
+    minH: STANDARD_H,
+    maxW: w,
+    maxH: STANDARD_H,
+  }));
+}
+
+function packAll(layouts: ResponsiveLayouts): ResponsiveLayouts {
+  return {
+    lg: packBreakpoint("lg", layouts.lg ?? []),
+    md: packBreakpoint("md", layouts.md ?? []),
+    sm: packBreakpoint("sm", layouts.sm ?? []),
+    xs: packBreakpoint("xs", layouts.xs ?? []),
+  };
+}
+
 const DEFAULT_LAYOUTS: ResponsiveLayouts = {
   lg: buildUniform(DEFAULT_ORDER, 12),
   md: buildUniform(DEFAULT_ORDER, 12),
@@ -174,7 +210,17 @@ export function DashboardGrid() {
     DEFAULT_LAYOUTS,
   );
   const [mounted, setMounted] = useState(false);
+  const [bp, setBp] = useState<BP>("lg");
   useEffect(() => setMounted(true), []);
+
+  // After hydrating from localStorage (or defaults), snap everything to a
+  // tight top-left-packed board. Runs once per session.
+  const [normalized, setNormalized] = useState(false);
+  useEffect(() => {
+    if (!hydrated || normalized) return;
+    setResponsiveLayouts((prev) => packAll(prev));
+    setNormalized(true);
+  }, [hydrated, normalized, setResponsiveLayouts]);
 
   useEffect(() => {
     (window as unknown as { __yissReset?: () => void }).__yissReset = () => {
@@ -207,16 +253,21 @@ export function DashboardGrid() {
           className="layout"
           layouts={layouts}
           breakpoints={{ lg: 1200, md: 996, sm: 720, xs: 0 }}
-          cols={{ lg: 12, md: 12, sm: 6, xs: 2 }}
+          cols={BREAKPOINT_COLS}
           rowHeight={32}
           margin={[16, 16]}
           draggableHandle=".drag-handle"
           isDraggable={true}
           isResizable={false}
           compactType="vertical"
-          onLayoutChange={(_current, all) =>
-            setResponsiveLayouts(all as ResponsiveLayouts)
-          }
+          onBreakpointChange={(next) => setBp(next as BP)}
+          onDragStop={(newLayout) => {
+            const packed = packBreakpoint(bp, newLayout);
+            setResponsiveLayouts({
+              ...layouts,
+              [bp]: packed,
+            } as ResponsiveLayouts);
+          }}
         >
           {items.map((k) => (
             <div key={k} className="ink-fade">
