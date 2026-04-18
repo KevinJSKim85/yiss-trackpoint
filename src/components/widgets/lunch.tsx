@@ -13,7 +13,7 @@ const MENU = [
 
 const TAGS = ["Korean", "Halal option", "Nut-free"];
 
-export function LunchWidget({ editMode }: { editMode?: boolean }) {
+export function LunchWidget() {
   const today = new Date();
   const dow = today.toLocaleDateString("en-US", { weekday: "long" });
 
@@ -22,7 +22,7 @@ export function LunchWidget({ editMode }: { editMode?: boolean }) {
       title="Lunch today"
       eyebrow={`${dow} · Cafeteria`}
       accent="sage"
-      editMode={editMode}
+
       headerExtra={
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] text-ink-muted">
           <UtensilsCrossed className="h-3 w-3" />

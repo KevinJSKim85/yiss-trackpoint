@@ -11,13 +11,13 @@ const MEETINGS = [
   { club: "Key Club", day: "Fri", time: "Lunch", where: "Commons" },
 ];
 
-export function ClubsWidget({ editMode }: { editMode?: boolean }) {
+export function ClubsWidget() {
   return (
     <WidgetShell
       title="Club meetings"
       eyebrow="From Gmail invites"
       accent="gold"
-      editMode={editMode}
+
       headerExtra={
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] text-ink-muted">
           <Users className="h-3 w-3" />

@@ -36,7 +36,7 @@ const ROWS = [
   },
 ];
 
-export function SchoologyWidget({ editMode }: { editMode?: boolean }) {
+export function SchoologyWidget() {
   return (
     <WidgetShell
       title="Schoology"
@@ -44,7 +44,7 @@ export function SchoologyWidget({ editMode }: { editMode?: boolean }) {
       accent="ink"
       href="https://app.schoology.com"
       hrefLabel="Open"
-      editMode={editMode}
+
     >
       <ul className="space-y-1.5">
         {ROWS.map((r) => {

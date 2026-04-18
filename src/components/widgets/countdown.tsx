@@ -32,7 +32,7 @@ function fmt(n: number) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function CountdownWidget({ editMode }: { editMode?: boolean }) {
+export function CountdownWidget() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
@@ -40,7 +40,7 @@ export function CountdownWidget({ editMode }: { editMode?: boolean }) {
     return () => clearInterval(iv);
   }, []);
 
-  if (!now) return <WidgetShell title="Bell Schedule" eyebrow="Today" accent="ink" editMode={editMode}><div /></WidgetShell>;
+  if (!now) return <WidgetShell title="Bell Schedule" eyebrow="Today" accent="ink"><div /></WidgetShell>;
 
   const nowMin = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
   const isWeekend = now.getDay() === 0 || now.getDay() === 6;
@@ -76,7 +76,7 @@ export function CountdownWidget({ editMode }: { editMode?: boolean }) {
       title="Bell Schedule"
       eyebrow="Today"
       accent="ink"
-      editMode={editMode}
+
     >
       <div className="flex h-full flex-col justify-between gap-3">
         <div>

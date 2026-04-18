@@ -42,7 +42,7 @@ const GAMES = [
   },
 ];
 
-export function SportsWidget({ editMode }: { editMode?: boolean }) {
+export function SportsWidget() {
   return (
     <WidgetShell
       title="Guardians Athletics"
@@ -50,7 +50,7 @@ export function SportsWidget({ editMode }: { editMode?: boolean }) {
       accent="crimson"
       href="https://www.kaiac.org/"
       hrefLabel="KAIAC"
-      editMode={editMode}
+
       headerExtra={
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] text-gold">
           <Trophy className="h-3 w-3" />

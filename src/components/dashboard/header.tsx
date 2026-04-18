@@ -1,20 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Sun, Pencil, Check, RotateCcw } from "lucide-react";
+import { Moon, Sun, RotateCcw } from "lucide-react";
 import { YissCrest, YissWordmark } from "@/components/brand/crest";
-import { cn } from "@/lib/utils";
 
 type HeaderProps = {
-  editMode: boolean;
-  onToggleEdit: () => void;
   onResetLayout: () => void;
   greetingName?: string;
 };
 
 export function DashboardHeader({
-  editMode,
-  onToggleEdit,
   onResetLayout,
   greetingName = "Guardian",
 }: HeaderProps) {
@@ -93,39 +88,19 @@ export function DashboardHeader({
                 </>
               )}
             </p>
+            <p className="mt-1 text-[11px] italic text-ink-muted">
+              Drag any panel from its header to rearrange — positions save automatically.
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {editMode && (
-            <button
-              onClick={onResetLayout}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line-strong)] bg-[color:var(--parchment-soft)] px-3.5 py-2 text-xs font-medium text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Reset layout
-            </button>
-          )}
           <button
-            onClick={onToggleEdit}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition",
-              editMode
-                ? "border-[color:var(--gold)] bg-[color:var(--gold)] text-[color:var(--ink)]"
-                : "border-[color:var(--line-strong)] bg-[color:var(--porcelain)] text-ink hover:border-[color:var(--gold)]",
-            )}
+            onClick={onResetLayout}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--line-strong)] bg-[color:var(--porcelain)] px-3.5 py-2 text-xs font-medium text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink"
           >
-            {editMode ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Save layout
-              </>
-            ) : (
-              <>
-                <Pencil className="h-3.5 w-3.5" />
-                Edit layout
-              </>
-            )}
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset layout
           </button>
           <button
             onClick={toggleTheme}

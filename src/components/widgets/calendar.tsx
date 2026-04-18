@@ -46,7 +46,7 @@ const EVENTS = [
   },
 ];
 
-export function CalendarWidget({ editMode }: { editMode?: boolean }) {
+export function CalendarWidget() {
   const today = new Date();
   const dow = today.toLocaleDateString("en-US", { weekday: "short" });
   const day = today.getDate();
@@ -58,7 +58,7 @@ export function CalendarWidget({ editMode }: { editMode?: boolean }) {
       accent="ink"
       href="https://calendar.google.com"
       hrefLabel="Calendar"
-      editMode={editMode}
+
       headerExtra={
         <div className="flex flex-col items-center rounded-lg border border-[color:var(--line)] bg-[color:var(--parchment-soft)] px-2 py-1 leading-none">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-ink-muted">

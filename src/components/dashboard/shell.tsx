@@ -1,22 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { DashboardHeader } from "./header";
 import { DashboardGrid } from "./grid";
 
 export function DashboardShell() {
-  const [editMode, setEditMode] = useState(false);
   return (
     <>
       <DashboardHeader
-        editMode={editMode}
-        onToggleEdit={() => setEditMode((v) => !v)}
         onResetLayout={() => {
           (window as unknown as { __yissReset?: () => void }).__yissReset?.();
         }}
       />
       <main className="flex-1">
-        <DashboardGrid editMode={editMode} />
+        <DashboardGrid />
       </main>
       <footer className="mx-auto w-full max-w-[1400px] px-5 pb-8 md:px-8">
         <div className="divider mb-4" />

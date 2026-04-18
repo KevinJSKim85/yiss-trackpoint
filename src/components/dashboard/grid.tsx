@@ -55,44 +55,60 @@ type WidgetKey =
   | "clubs"
   | "quick-links";
 
-const WIDGETS: Record<WidgetKey, (p: { editMode: boolean }) => React.ReactNode> = {
-  weather: (p) => <WeatherWidget {...p} />,
-  aqi: (p) => <AirQualityWidget {...p} />,
-  countdown: (p) => <CountdownWidget {...p} />,
-  gmail: (p) => <GmailWidget {...p} />,
-  calendar: (p) => <CalendarWidget {...p} />,
-  drive: (p) => <DriveWidget {...p} />,
-  schoology: (p) => <SchoologyWidget {...p} />,
-  powerschool: (p) => <PowerSchoolWidget {...p} />,
-  sports: (p) => <SportsWidget {...p} />,
-  "ig-yiss": (p) => <InstagramYissWidget {...p} />,
-  "ig-yisspn": (p) => <InstagramYisspnWidget {...p} />,
-  lunch: (p) => <LunchWidget {...p} />,
-  clubs: (p) => <ClubsWidget {...p} />,
-  "quick-links": (p) => <QuickLinksBoard {...p} />,
+const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
+  weather: () => <WeatherWidget />,
+  aqi: () => <AirQualityWidget />,
+  countdown: () => <CountdownWidget />,
+  gmail: () => <GmailWidget />,
+  calendar: () => <CalendarWidget />,
+  drive: () => <DriveWidget />,
+  schoology: () => <SchoologyWidget />,
+  powerschool: () => <PowerSchoolWidget />,
+  sports: () => <SportsWidget />,
+  "ig-yiss": () => <InstagramYissWidget />,
+  "ig-yisspn": () => <InstagramYisspnWidget />,
+  lunch: () => <LunchWidget />,
+  clubs: () => <ClubsWidget />,
+  "quick-links": () => <QuickLinksBoard />,
 };
 
 const STANDARD_W = 3;
 const STANDARD_H = 8;
 
-function buildLayout(order: WidgetKey[], cols: number): LayoutItem[] {
+function buildLayout(
+  order: WidgetKey[],
+  cols: number,
+  qlSpan: number,
+): LayoutItem[] {
   const widgets = order.filter((k) => k !== "quick-links");
   const out: LayoutItem[] = [];
   const perRow = Math.max(1, Math.floor(cols / STANDARD_W));
   widgets.forEach((k, i) => {
     const x = (i % perRow) * STANDARD_W;
     const y = Math.floor(i / perRow) * STANDARD_H;
-    out.push({ i: k, x, y, w: STANDARD_W, h: STANDARD_H, minW: 2, minH: 5 });
+    out.push({
+      i: k,
+      x,
+      y,
+      w: STANDARD_W,
+      h: STANDARD_H,
+      minW: STANDARD_W,
+      minH: STANDARD_H,
+      maxW: STANDARD_W,
+      maxH: STANDARD_H,
+    });
   });
   const lastY = Math.ceil(widgets.length / perRow) * STANDARD_H;
   out.push({
     i: "quick-links",
     x: 0,
     y: lastY,
-    w: cols,
-    h: 5,
-    minW: 4,
-    minH: 4,
+    w: qlSpan,
+    h: STANDARD_H,
+    minW: qlSpan,
+    minH: STANDARD_H,
+    maxW: qlSpan,
+    maxH: STANDARD_H,
   });
   return out;
 }
@@ -114,58 +130,47 @@ const DEFAULT_ORDER: WidgetKey[] = [
   "quick-links",
 ];
 
+function buildMobile(order: WidgetKey[], cols: number): LayoutItem[] {
+  // All items full-width (cols wide), uniform height — stacked vertically.
+  return order.map((k, i) => ({
+    i: k,
+    x: 0,
+    y: i * STANDARD_H,
+    w: cols,
+    h: STANDARD_H,
+    minW: cols,
+    minH: STANDARD_H,
+    maxW: cols,
+    maxH: STANDARD_H,
+  }));
+}
+
+function buildUniform(order: WidgetKey[], cols: number): LayoutItem[] {
+  // Every panel is exactly STANDARD_W × STANDARD_H. Quick Links is no exception.
+  const perRow = Math.max(1, Math.floor(cols / STANDARD_W));
+  return order.map((k, i) => ({
+    i: k,
+    x: (i % perRow) * STANDARD_W,
+    y: Math.floor(i / perRow) * STANDARD_H,
+    w: STANDARD_W,
+    h: STANDARD_H,
+    minW: STANDARD_W,
+    minH: STANDARD_H,
+    maxW: STANDARD_W,
+    maxH: STANDARD_H,
+  }));
+}
+
 const DEFAULT_LAYOUTS: ResponsiveLayouts = {
-  lg: buildLayout(DEFAULT_ORDER, 12),
-  md: buildLayout(DEFAULT_ORDER, 12),
-  sm: (() => {
-    const widgets = DEFAULT_ORDER.filter((k) => k !== "quick-links");
-    const layout: LayoutItem[] = widgets.map((k, i) => ({
-      i: k,
-      x: (i % 2) * 3,
-      y: Math.floor(i / 2) * STANDARD_H,
-      w: 3,
-      h: STANDARD_H,
-      minW: 2,
-      minH: 5,
-    }));
-    layout.push({
-      i: "quick-links",
-      x: 0,
-      y: Math.ceil(widgets.length / 2) * STANDARD_H,
-      w: 6,
-      h: 6,
-      minW: 4,
-      minH: 4,
-    });
-    return layout;
-  })(),
-  xs: (() => {
-    const widgets = DEFAULT_ORDER.filter((k) => k !== "quick-links");
-    const layout: LayoutItem[] = widgets.map((k, i) => ({
-      i: k,
-      x: 0,
-      y: i * STANDARD_H,
-      w: 2,
-      h: STANDARD_H,
-      minW: 2,
-      minH: 5,
-    }));
-    layout.push({
-      i: "quick-links",
-      x: 0,
-      y: widgets.length * STANDARD_H,
-      w: 2,
-      h: 8,
-      minW: 2,
-      minH: 6,
-    });
-    return layout;
-  })(),
+  lg: buildUniform(DEFAULT_ORDER, 12),
+  md: buildUniform(DEFAULT_ORDER, 12),
+  sm: buildUniform(DEFAULT_ORDER, 6),
+  xs: buildMobile(DEFAULT_ORDER, 2),
 };
 
-export function DashboardGrid({ editMode }: { editMode: boolean }) {
+export function DashboardGrid() {
   const [layouts, setResponsiveLayouts, hydrated] = useLocalStorage<ResponsiveLayouts>(
-    "yiss-layouts-v1",
+    "yiss-layouts-v3",
     DEFAULT_LAYOUTS,
   );
   const [mounted, setMounted] = useState(false);
@@ -174,7 +179,7 @@ export function DashboardGrid({ editMode }: { editMode: boolean }) {
   useEffect(() => {
     (window as unknown as { __yissReset?: () => void }).__yissReset = () => {
       try {
-        localStorage.removeItem("yiss-layouts-v1");
+        localStorage.removeItem("yiss-layouts-v3");
       } catch {}
       setResponsiveLayouts(DEFAULT_LAYOUTS);
     };
@@ -196,7 +201,7 @@ export function DashboardGrid({ editMode }: { editMode: boolean }) {
   }
 
   return (
-    <div className={editMode ? "edit-mode" : undefined}>
+    <div>
       <div className="mx-auto w-full max-w-[1400px] px-4 pb-12 pt-4 md:px-8">
         <ResponsiveGridLayout
           className="layout"
@@ -206,16 +211,16 @@ export function DashboardGrid({ editMode }: { editMode: boolean }) {
           rowHeight={32}
           margin={[16, 16]}
           draggableHandle=".drag-handle"
-          isDraggable={editMode}
-          isResizable={editMode}
+          isDraggable={true}
+          isResizable={false}
           compactType="vertical"
-          onLayoutChange={(_current, all) => {
-            if (editMode) setResponsiveLayouts(all as ResponsiveLayouts);
-          }}
+          onLayoutChange={(_current, all) =>
+            setResponsiveLayouts(all as ResponsiveLayouts)
+          }
         >
           {items.map((k) => (
             <div key={k} className="ink-fade">
-              {WIDGETS[k]({ editMode })}
+              {WIDGETS[k]()}
             </div>
           ))}
         </ResponsiveGridLayout>
