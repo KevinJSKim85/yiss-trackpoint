@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Moon, Sun, RotateCcw } from "lucide-react";
-import { YissCrest, YissWordmark } from "@/components/brand/crest";
 
 type HeaderProps = {
   onResetLayout: () => void;
@@ -29,15 +29,21 @@ export function DashboardHeader({ onResetLayout }: HeaderProps) {
 
   return (
     <header className="relative border-b border-[color:var(--line)] bg-[color:var(--parchment-soft)]/60 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-5 py-3.5 md:px-8">
+      <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-5 py-3 md:px-8">
         <div className="flex items-center gap-3">
-          <YissCrest size={40} />
-          <div className="flex flex-col gap-0.5">
-            <YissWordmark />
-            <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-ink-muted">
-              Yongsan International · Est. 1990
-            </p>
+          <div className="flex items-center rounded-md bg-white px-2 py-1 shadow-[0_0_0_1px_rgba(11,30,63,0.08)]">
+            <Image
+              src="/yiss-logo.jpg"
+              alt="Yongsan International School of Seoul"
+              width={1500}
+              height={415}
+              priority
+              className="h-6 w-auto md:h-7"
+            />
           </div>
+          <span className="hidden text-[10px] font-medium uppercase tracking-[0.22em] text-ink-muted md:inline">
+            TrackPoint
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
