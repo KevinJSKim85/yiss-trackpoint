@@ -1,23 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Arimo, JetBrains_Mono, Poppins } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/dashboard/sidebar";
 
-const inter = Inter({
-  variable: "--font-inter",
+const arimo = Arimo({
+  variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const poppins = Poppins({
+  variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
-  axes: ["SOFT", "opsz"],
+  weight: ["400", "600", "700"],
 });
 
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -59,7 +59,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${fraunces.variable} ${jetbrains.variable} h-full`}
+      className={`${arimo.variable} ${poppins.variable} ${jetbrainsMono.variable} h-full`}
     >
       <body className="min-h-full flex">
         <script

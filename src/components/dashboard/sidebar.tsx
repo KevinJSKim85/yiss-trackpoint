@@ -15,6 +15,8 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   Users,
   X,
@@ -22,6 +24,8 @@ import {
 } from "lucide-react";
 
 import { SIDEBAR_ITEMS, type SidebarIconName } from "./sidebar-nav";
+import { useLocalStorage } from "@/lib/storage";
+import { cn } from "@/lib/utils";
 
 const iconMap: Record<SidebarIconName, LucideIcon> = {
   Home,
@@ -42,23 +46,62 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({
+  onNavigate,
+  collapsed = false,
+  onToggleCollapse,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}) {
   const pathname = usePathname() ?? "/";
 
   return (
     <div className="flex h-full flex-col">
       {/* Brand mark */}
-      <div className="flex items-center gap-2.5 border-b border-[color:var(--line)] px-5 py-4">
+      <div
+        className={cn(
+          "flex items-center gap-2.5 border-b border-[color:var(--line)] px-5 py-4",
+          collapsed && "justify-center px-2",
+        )}
+      >
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--porcelain)] shadow-[0_0_0_1px_rgba(11,30,63,0.08)]">
           <span className="font-display text-sm font-semibold text-ink">Y</span>
         </div>
-        <div className="flex flex-col leading-tight">
-          <span className="font-display text-[13px] text-ink">TrackPoint</span>
-          <span className="text-[9px] uppercase tracking-[0.22em] text-ink-muted">
-            YISS
-          </span>
-        </div>
+        {!collapsed && (
+          <div className="flex flex-col leading-tight">
+            <span className="font-display text-[13px] text-ink">TrackPoint</span>
+            <span className="text-[9px] uppercase tracking-[0.22em] text-ink-muted">
+              YISS
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* Collapse toggle — desktop (lg+) only; mobile drawer has no onToggleCollapse */}
+      {onToggleCollapse && (
+        <div
+          className={cn(
+            "hidden border-b border-[color:var(--line)] px-2 py-2 lg:flex",
+            collapsed ? "justify-center" : "justify-end px-3",
+          )}
+        >
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-[color:var(--line-strong)] bg-[color:var(--porcelain)] text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink"
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="h-3.5 w-3.5" strokeWidth={1.75} />
+            ) : (
+              <PanelLeftClose className="h-3.5 w-3.5" strokeWidth={1.75} />
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Nav list */}
       <nav
@@ -75,12 +118,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   href={item.href}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
-                  className={
-                    "group relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] leading-tight transition " +
-                    (active
+                  title={collapsed ? item.label : undefined}
+                  className={cn(
+                    "group relative flex items-center rounded-md py-2 text-[13px] leading-tight transition",
+                    collapsed ? "justify-center px-0" : "gap-3 px-3",
+                    active
                       ? "bg-[color:var(--parchment-soft)] font-semibold text-ink"
-                      : "text-ink-soft hover:bg-[color:var(--parchment-soft)]/60 hover:text-ink")
-                  }
+                      : "text-ink-soft hover:bg-[color:var(--parchment-soft)]/60 hover:text-ink",
+                  )}
                 >
                   {active && (
                     <span
@@ -97,7 +142,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                     }
                     strokeWidth={active ? 2.25 : 1.75}
                   />
-                  <span className="truncate">{item.label}</span>
+                  {!collapsed && <span className="truncate">{item.label}</span>}
                 </Link>
               </li>
             );
@@ -106,31 +151,48 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* Profile placeholder */}
-      <div className="border-t border-[color:var(--line)] p-3">
-        <div className="flex items-center gap-3 rounded-md px-2 py-2">
+      <div
+        className={cn(
+          "border-t border-[color:var(--line)]",
+          collapsed ? "p-2" : "p-3",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center rounded-md py-2",
+            collapsed ? "justify-center px-0" : "gap-3 px-2",
+          )}
+        >
           <div
             aria-hidden="true"
+            title={collapsed ? "Guest" : undefined}
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-[color:var(--line-strong)] bg-[color:var(--parchment-soft)] text-[11px] font-semibold tracking-wide text-ink"
           >
             GU
           </div>
-          <div className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-[13px] font-medium text-ink">
-              Guest
-            </span>
-            <span className="truncate text-[11px] text-ink-muted">
-              Sign in to sync
-            </span>
-          </div>
+          {!collapsed && (
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate text-[13px] font-medium text-ink">
+                Guest
+              </span>
+              <span className="truncate text-[11px] text-ink-muted">
+                Sign in to sync
+              </span>
+            </div>
+          )}
         </div>
         <button
           type="button"
           disabled
           aria-disabled="true"
-          className="mt-1 flex w-full cursor-not-allowed items-center gap-3 rounded-md px-3 py-2 text-[12px] text-ink-muted opacity-60 transition"
+          title={collapsed ? "Log out" : undefined}
+          className={cn(
+            "mt-1 flex w-full cursor-not-allowed items-center rounded-md py-2 text-[12px] text-ink-muted opacity-60 transition",
+            collapsed ? "justify-center px-0" : "gap-3 px-3",
+          )}
         >
-          <LogOut className="h-4 w-4" strokeWidth={1.75} />
-          Log out
+          <LogOut className="h-4 w-4 flex-shrink-0" strokeWidth={1.75} />
+          {!collapsed && "Log out"}
         </button>
       </div>
     </div>
@@ -139,6 +201,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar() {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useLocalStorage<boolean>(
+    "yiss-sidebar-collapsed",
+    false,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -169,8 +235,16 @@ export function Sidebar() {
       </button>
 
       {/* Desktop sidebar (lg+) */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-[color:var(--line)] bg-[color:var(--parchment)] lg:block">
-        <SidebarContent />
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 overflow-hidden border-r border-[color:var(--line)] bg-[color:var(--parchment)] transition-[width] duration-200 ease-out lg:block",
+          collapsed ? "w-14" : "w-60",
+        )}
+      >
+        <SidebarContent
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((prev) => !prev)}
+        />
       </aside>
 
       {/* Mobile drawer + scrim */}
