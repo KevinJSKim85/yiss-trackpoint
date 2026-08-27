@@ -75,25 +75,27 @@ export function CollegeNewsWidget() {
         <p className="text-sm text-ink-muted">No college news right now.</p>
       )}
       {!isLoading && !error && items.length > 0 && (
-        <ul className="divide-y divide-[color:var(--line)]">
-          {items.map((item) => (
-            <li key={item.id} className="py-2.5 first:pt-0 last:pb-0">
-              <span
-                className="inline-flex items-center rounded-full border px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wider"
-                style={{
-                  borderColor: CATEGORY_COLOR[item.category],
-                  color: CATEGORY_COLOR[item.category],
-                }}
-              >
-                {CATEGORY_LABEL[item.category]}
-              </span>
-              <p className="mt-1 line-clamp-2 font-display text-sm font-semibold leading-snug text-ink">
-                {item.title}
-              </p>
-              <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">
+        <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
+          {items.slice(0, 3).map((item) => (
+            <li key={item.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
+                  style={{
+                    borderColor: CATEGORY_COLOR[item.category],
+                    color: CATEGORY_COLOR[item.category],
+                  }}
+                >
+                  {CATEGORY_LABEL[item.category]}
+                </span>
+                <p className="line-clamp-1 min-w-0 flex-1 font-display text-sm font-semibold leading-snug text-ink">
+                  {item.title}
+                </p>
+              </div>
+              <p className="line-clamp-1 text-xs leading-relaxed text-ink-soft">
                 {item.blurb}
               </p>
-              <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-ink-muted">
+              <div className="flex items-center justify-between gap-2 text-[11px] text-ink-muted">
                 <span className="truncate">
                   {item.source} · {timeAgo(item.published)}
                 </span>

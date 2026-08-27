@@ -67,18 +67,18 @@ export function SportsWidget() {
         </div>
       )}
       {data && data.items.length > 0 && (
-        <ul className="divide-y divide-[color:var(--line)]">
-          {data.items.map((item) => (
+        <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
+          {data.items.slice(0, 3).map((item) => (
             <li key={item.id}>
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0 transition hover:opacity-80"
+                className="flex flex-col gap-1.5 rounded-md py-3 first:pt-0 last:pb-0 transition hover:bg-[color:var(--parchment-soft)]/60"
               >
-                <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
                   <span
-                    className="mb-1 inline-block rounded-full border px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wider"
+                    className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
                     style={{
                       borderColor: KIND_COLOR[item.kind],
                       color: KIND_COLOR[item.kind],
@@ -86,18 +86,18 @@ export function SportsWidget() {
                   >
                     {KIND_LABEL[item.kind]}
                   </span>
-                  <p className="line-clamp-2 font-display text-[12.5px] font-semibold leading-snug text-ink">
+                  <p className="line-clamp-1 min-w-0 flex-1 font-display text-[12.5px] font-semibold leading-snug text-ink">
                     {item.title}
                   </p>
-                  {item.excerpt && (
-                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-ink-muted">
-                      {item.excerpt}
-                    </p>
-                  )}
+                  <span className="shrink-0 text-[10px] tabular-nums text-ink-muted">
+                    {relativeTime(new Date(item.published))}
+                  </span>
                 </div>
-                <span className="shrink-0 pt-0.5 text-right text-[10.5px] tabular-nums text-ink-muted">
-                  {relativeTime(new Date(item.published))}
-                </span>
+                {item.excerpt && (
+                  <p className="line-clamp-1 text-xs leading-relaxed text-ink-muted">
+                    {item.excerpt}
+                  </p>
+                )}
               </a>
             </li>
           ))}

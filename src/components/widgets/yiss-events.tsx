@@ -58,8 +58,8 @@ export function YissEventsWidget() {
         </div>
       )}
       {data && data.items.length > 0 && (
-        <ul className="divide-y divide-[color:var(--line)]">
-          {data.items.map((item) => {
+        <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
+          {data.items.slice(0, 3).map((item) => {
             const start = new Date(item.startDate);
             const today = isToday(start, now);
             return (
@@ -68,7 +68,7 @@ export function YissEventsWidget() {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`flex gap-3 rounded-lg px-1 py-2.5 first:pt-0 last:pb-0 ${
+                  className={`flex gap-3 rounded-lg px-1 py-3 first:pt-0 last:pb-0 transition hover:bg-[color:var(--parchment-soft)]/60 ${
                     today ? "bg-[color:var(--parchment-soft)]" : ""
                   }`}
                 >
@@ -86,11 +86,11 @@ export function YissEventsWidget() {
                       {start.getDate()}
                     </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-display line-clamp-2 text-[13px] font-semibold leading-snug text-ink">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <p className="font-display line-clamp-1 text-[13px] font-semibold leading-snug text-ink">
                       {item.title}
                     </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">
                       {item.location && (
                         <span className="inline-flex min-w-0 items-center gap-1">
                           <MapPin className="h-3 w-3 shrink-0" />

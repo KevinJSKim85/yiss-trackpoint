@@ -66,22 +66,22 @@ export function AnnouncementsWidget() {
       href="/announcements"
       hrefLabel="See all"
     >
-      <ul className="divide-y divide-[color:var(--line)]">
-        {ANNOUNCEMENTS.map((a, i) => (
-          <li key={i} className="flex gap-2.5 py-2.5 first:pt-0 last:pb-0">
+      <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
+        {ANNOUNCEMENTS.slice(0, 3).map((a, i) => (
+          <li key={i} className="flex gap-2.5 py-3 first:pt-0 last:pb-0">
             <div
               className="w-[1.5px] shrink-0 rounded-full"
               style={{ background: ROLE_COLOR[a.role] }}
               aria-hidden
             />
-            <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate text-[12.5px] font-semibold text-ink">
+                  <span className="truncate text-[11px] font-semibold text-ink">
                     {a.author}
                   </span>
                   <span
-                    className="shrink-0 rounded-full border px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wider"
+                    className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
                     style={{
                       borderColor: ROLE_COLOR[a.role],
                       color: ROLE_COLOR[a.role],
@@ -94,10 +94,10 @@ export function AnnouncementsWidget() {
                   {a.time}
                 </span>
               </div>
-              <p className="mt-0.5 truncate text-[12.5px] font-medium text-ink">
+              <p className="truncate text-[12.5px] font-medium text-ink">
                 {a.title}
               </p>
-              <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">
+              <p className="line-clamp-1 text-xs leading-relaxed text-ink-soft">
                 {a.body}
               </p>
             </div>

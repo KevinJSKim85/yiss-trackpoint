@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { CountdownWidget } from "@/components/widgets/countdown";
 import { SportsWidget } from "@/components/widgets/sports";
 import { InstagramYissWidget } from "@/components/widgets/instagram-yiss";
 import { InstagramYisspnWidget } from "@/components/widgets/instagram-yisspn";
@@ -16,7 +15,6 @@ import { YissNewsWidget } from "@/components/widgets/yiss-news";
 import { YissEventsWidget } from "@/components/widgets/yiss-events";
 
 type WidgetKey =
-  | "countdown"
   | "sports"
   | "ig-yiss"
   | "ig-yisspn"
@@ -29,7 +27,6 @@ type WidgetKey =
   | "yiss-events";
 
 const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
-  countdown: () => <CountdownWidget />,
   sports: () => <SportsWidget />,
   "ig-yiss": () => <InstagramYissWidget />,
   "ig-yisspn": () => <InstagramYisspnWidget />,
@@ -46,7 +43,6 @@ const DEFAULT_ORDER: WidgetKey[] = [
   "announcements",
   "yiss-news",
   "yiss-events",
-  "countdown",
   "sports",
   "lunch",
   "ig-yiss",

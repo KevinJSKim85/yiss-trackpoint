@@ -45,14 +45,14 @@ export function YissNewsWidget() {
         </div>
       )}
       {data && data.items.length > 0 && (
-        <ul className="divide-y divide-[color:var(--line)]">
-          {data.items.map((item) => (
+        <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
+          {data.items.slice(0, 3).map((item) => (
             <li key={item.id}>
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex gap-3 py-2.5 first:pt-0 last:pb-0"
+                className="flex gap-3 rounded-md py-3 first:pt-0 last:pb-0 transition hover:bg-[color:var(--parchment-soft)]/60"
               >
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-[color:var(--line)] bg-[color:var(--parchment-soft)]">
                   {item.thumbnail ? (
@@ -68,15 +68,15 @@ export function YissNewsWidget() {
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display line-clamp-2 text-[13px] font-semibold leading-snug text-ink">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <p className="font-display line-clamp-1 text-[13px] font-semibold leading-snug text-ink">
                     {item.title}
                   </p>
-                  <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">
+                  <p className="line-clamp-1 text-xs leading-relaxed text-ink-soft">
                     {item.excerpt}
                   </p>
-                  <div className="mt-1 flex justify-end">
-                    <span className="text-[10.5px] text-ink-muted">
+                  <div className="flex justify-end">
+                    <span className="text-[10px] text-ink-muted">
                       {relativeTime(new Date(item.published))}
                     </span>
                   </div>

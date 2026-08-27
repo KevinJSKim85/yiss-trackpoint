@@ -13,9 +13,11 @@ type InstagramPost = {
   isVideo: boolean;
 };
 
+type MirrorName = "picuki" | "imginn" | "gramhir" | "iyeni";
+
 type InstagramApiResponse = {
   posts: InstagramPost[];
-  source: "rsshub" | "instagram" | "mock";
+  source: MirrorName | "mock";
 };
 
 const ACCENT_HEX: Record<string, string> = {
@@ -146,153 +148,238 @@ function stripHtml(html: string) {
   return decodeEntities(html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")).trim();
 }
 
-function extractTag(block: string, tag: string): string | null {
-  const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
-  if (!match) return null;
-  let value = match[1].trim();
-  const cdata = value.match(/^<!\[CDATA\[([\s\S]*?)\]\]>$/);
-  if (cdata) value = cdata[1];
-  return value;
-}
+const USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-// RSSHub public instance mirrors an Instagram profile as an RSS feed. Parsed
-// with a light regex scan instead of DOMParser (unavailable in the route's
-// server runtime) or an XML dependency (none is installed for this project).
-async function fetchFromRsshub(username: string): Promise<InstagramPost[] | null> {
+const MINUTE = 1000 * 60;
+const WEEK = DAY * 7;
+const FETCH_TIMEOUT_MS = 15000;
+
+// Public Instagram mirrors that server-render a profile's recent posts as
+// plain HTML (no login, no official API). Tried in order; the first one that
+// responds with parseable posts wins. Any single mirror failing (blocked,
+// down, redesigned) is expected — only exhausting the whole list falls back
+// to the mock feed.
+const MIRRORS: { name: MirrorName; url: (username: string) => string }[] = [
+  { name: "picuki", url: (username) => `https://www.picuki.com/profile/${username}` },
+  { name: "imginn", url: (username) => `https://imginn.com/${username}/` },
+  { name: "gramhir", url: (username) => `https://gramhir.pro/profile/${username}` },
+  { name: "iyeni", url: (username) => `https://iyeni.com/@${username}` },
+];
+
+async function fetchMirrorHtml(url: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(`https://rsshub.app/instagram/user/${username}`, {
+    const res = await fetch(url, {
       next: { revalidate: 900 },
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; yiss-trackpoint/1.0)" },
-    });
-    if (!res.ok) return null;
-
-    const xml = await res.text();
-    const items = xml.match(/<item>[\s\S]*?<\/item>/g);
-    if (!items || items.length === 0) return null;
-
-    const posts = items.slice(0, 4).map((item, i) => {
-      const title = extractTag(item, "title");
-      const description = extractTag(item, "description") ?? "";
-      const link = extractTag(item, "link") ?? `https://www.instagram.com/${username}/`;
-      const pubDate = extractTag(item, "pubDate");
-      const guid = extractTag(item, "guid");
-
-      const imgMatch = description.match(/<img[^>]+src=["']([^"'\s]+)["']/i);
-      const thumbnail = imgMatch?.[1]
-        ? decodeEntities(imgMatch[1])
-        : placeholderThumbnail(username);
-
-      const caption = stripHtml(description) || stripHtml(title ?? "") || "View on Instagram";
-      const isVideo = /<video[\s>]|\/reel\//i.test(item);
-      const timestamp = pubDate && !Number.isNaN(new Date(pubDate).getTime())
-        ? new Date(pubDate).toISOString()
-        : new Date().toISOString();
-
-      const post: InstagramPost = {
-        id: guid || `${username}-rsshub-${i}`,
-        permalink: link,
-        thumbnail,
-        caption: caption.slice(0, 200),
-        likes: 0,
-        comments: 0,
-        timestamp,
-        isVideo,
-      };
-      return post;
-    });
-
-    return posts;
-  } catch {
-    return null;
-  }
-}
-
-type InstagramGraphNode = {
-  id?: string;
-  shortcode?: string;
-  thumbnail_src?: string;
-  display_url?: string;
-  is_video?: boolean;
-  taken_at_timestamp?: number;
-  edge_media_to_caption?: { edges?: { node?: { text?: string } }[] };
-  edge_liked_by?: { count?: number };
-  edge_media_preview_like?: { count?: number };
-  edge_media_to_comment?: { count?: number };
-};
-
-// Instagram's legacy embed JSON endpoint. It is almost always blocked with a
-// 403 for server-side requests, but it costs nothing to attempt before
-// falling back to the mock feed.
-async function fetchFromInstagram(username: string): Promise<InstagramPost[] | null> {
-  try {
-    const res = await fetch(`https://www.instagram.com/${username}/?__a=1&__d=dis`, {
-      next: { revalidate: 900 },
+      signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; yiss-trackpoint/1.0)",
-        Accept: "application/json",
+        "User-Agent": USER_AGENT,
+        Accept: "text/html,application/xhtml+xml",
       },
     });
     if (!res.ok) return null;
-
-    const data: unknown = await res.json();
-    const edges = (
-      data as {
-        graphql?: {
-          user?: { edge_owner_to_timeline_media?: { edges?: { node?: InstagramGraphNode }[] } };
-        };
-      }
-    )?.graphql?.user?.edge_owner_to_timeline_media?.edges;
-
-    if (!Array.isArray(edges) || edges.length === 0) return null;
-
-    return edges.slice(0, 4).map((edge, i) => {
-      const node = edge.node ?? {};
-      const captionText = node.edge_media_to_caption?.edges?.[0]?.node?.text ?? "";
-      const likes = node.edge_liked_by?.count ?? node.edge_media_preview_like?.count ?? 0;
-      const post: InstagramPost = {
-        id: node.id ?? `${username}-instagram-${i}`,
-        permalink: node.shortcode
-          ? `https://www.instagram.com/p/${node.shortcode}/`
-          : `https://www.instagram.com/${username}/`,
-        thumbnail: node.thumbnail_src ?? node.display_url ?? placeholderThumbnail(username),
-        caption: captionText.slice(0, 200) || "View on Instagram",
-        likes,
-        comments: node.edge_media_to_comment?.count ?? 0,
-        timestamp: node.taken_at_timestamp
-          ? new Date(node.taken_at_timestamp * 1000).toISOString()
-          : new Date().toISOString(),
-        isVideo: !!node.is_video,
-      };
-      return post;
-    });
+    return await res.text();
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+const RELATIVE_UNIT_RE =
+  "(s|sec|secs|second|seconds|mo|month|months|m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|week|weeks|y|yr|yrs|year|years)";
+
+// "3d", "2h ago", "1 month" -> ISO timestamp computed from the fetch time.
+// Mirrors render Instagram's relative post age as plain text instead of a
+// machine-readable timestamp, so this is the only way to recover one.
+function parseRelativeTimestamp(text: string): string | null {
+  const match = text
+    .trim()
+    .toLowerCase()
+    .match(new RegExp(`^(\\d+)\\s*${RELATIVE_UNIT_RE}\\b`));
+  if (!match) return null;
+  const amount = parseInt(match[1], 10);
+  if (Number.isNaN(amount)) return null;
+
+  const unit = match[2];
+  let unitMs: number;
+  if (unit.startsWith("mo")) unitMs = DAY * 30;
+  else if (unit.startsWith("s")) unitMs = 1000;
+  else if (unit.startsWith("m")) unitMs = MINUTE;
+  else if (unit.startsWith("h")) unitMs = HOUR;
+  else if (unit.startsWith("d")) unitMs = DAY;
+  else if (unit.startsWith("w")) unitMs = WEEK;
+  else if (unit.startsWith("y")) unitMs = DAY * 365;
+  else return null;
+
+  return isoAgo(amount * unitMs);
+}
+
+// "1,234" / "1.2K" / "3.4M" -> integer. Falls back to 0 for anything
+// unparseable, per the "parse if available, else 0" spec for likes/comments.
+function parseCount(text: string): number {
+  const cleaned = text.trim().toUpperCase().replace(/,/g, "");
+  const match = cleaned.match(/^([\d.]+)\s*(K|M)?$/);
+  if (!match) return 0;
+  const value = parseFloat(match[1]);
+  if (Number.isNaN(value)) return 0;
+  if (match[2] === "K") return Math.round(value * 1000);
+  if (match[2] === "M") return Math.round(value * 1_000_000);
+  return Math.round(value);
+}
+
+function looksLikeVideo(card: string): boolean {
+  return /\breel\b|\/reel\/|<video[\s>]|class=["'][^"']*(?:video|reel)[^"']*["']|play-icon|icon-video|fa-play/i.test(
+    card,
+  );
+}
+
+function extractThumbnail(card: string, username: string): string {
+  const lazy = card.match(/<img[^>]+(?:data-src|data-original)=["']([^"']+)["']/i);
+  if (lazy?.[1]) return decodeEntities(lazy[1]);
+  const plain = card.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (plain?.[1] && !/^data:image\/gif/i.test(plain[1])) return decodeEntities(plain[1]);
+  return placeholderThumbnail(username);
+}
+
+function extractCaption(card: string): string {
+  const paragraph = card.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+  if (paragraph?.[1] && stripHtml(paragraph[1])) return stripHtml(paragraph[1]).slice(0, 200);
+  const figcaption = card.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+  if (figcaption?.[1] && stripHtml(figcaption[1])) return stripHtml(figcaption[1]).slice(0, 200);
+  const alt = card.match(/<img[^>]+alt=["']([^"']*)["']/i);
+  const altText = alt?.[1] ? decodeEntities(alt[1]).trim() : "";
+  return (altText || "View on Instagram").slice(0, 200);
+}
+
+function extractTimestamp(card: string): string {
+  const timeTag = card.match(/<time[^>]+datetime=["']([^"']+)["']/i);
+  if (timeTag?.[1]) {
+    const parsed = new Date(timeTag[1]);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  const relative = card.match(new RegExp(`>\\s*(\\d+\\s*${RELATIVE_UNIT_RE})\\b[^<]*<`, "i"));
+  if (relative?.[1]) return parseRelativeTimestamp(relative[1]) ?? relative[1].trim();
+  return new Date().toISOString();
+}
+
+function extractLikes(card: string): number {
+  const match = card.match(/([\d][\d.,]*\s*[KM]?)\s*(?:<[^>]*>\s*)*(?:likes?|❤)/i);
+  return match?.[1] ? parseCount(match[1]) : 0;
+}
+
+function extractComments(card: string): number {
+  const match = card.match(/([\d][\d.,]*\s*[KM]?)\s*(?:<[^>]*>\s*)*comments?/i);
+  return match?.[1] ? parseCount(match[1]) : 0;
+}
+
+// Every mirror links each post card back to the real
+// instagram.com/(p|reel|tv)/<code>/ URL -- the one anchor that stays
+// consistent across all of them regardless of surrounding markup. A true
+// nested-tag parse needs a DOM, which isn't available in this route's
+// runtime (and no HTML/XML parsing dependency is installed for this
+// project), so each card is approximated as a text window anchored on its
+// permalink match and bounded by the surrounding <article>/card <div>
+// wrapper tags the task's own spec describes -- not by raw distance to the
+// neighboring match. The href sits near the top of a card (it wraps the
+// thumbnail) while caption/likes/comments/time trail after it, so a
+// distance-based split (e.g. the midpoint to the next match) systematically
+// attributes that trailing content to the wrong neighbor once cards are
+// packed tighter than half that distance, which is the common case in a
+// grid. CARD_LOOKBEHIND/MAX_CARD_RADIUS are only a fallback for markup that
+// doesn't use a recognizable wrapper tag.
+const CARD_LOOKBEHIND = 300;
+const MAX_CARD_RADIUS = 1200;
+
+function parsePostsFromHtml(html: string, username: string): InstagramPost[] {
+  const permalinkRe = /href=["']([^"']*instagram\.com\/(?:p|reel|tv)\/[a-zA-Z0-9_-]+\/?)[^"']*["']/gi;
+  const rawMatches: { index: number; permalink: string }[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = permalinkRe.exec(html)) !== null) {
+    const rawUrl = decodeEntities(match[1]);
+    const permalink = rawUrl.startsWith("http") ? rawUrl : `https://www.instagram.com${rawUrl}`;
+    rawMatches.push({ index: match.index, permalink });
+  }
+
+  const wrapperRe =
+    /<article\b[^>]*>|<div\b[^>]*class=["'][^"']*(?:post|card|item|photo|grid)[^"']*["'][^>]*>/gi;
+  const wrapperStarts: number[] = [];
+  let wrapperMatch: RegExpExecArray | null;
+  while ((wrapperMatch = wrapperRe.exec(html)) !== null) {
+    wrapperStarts.push(wrapperMatch.index);
+  }
+
+  function wrapperStartAtOrBefore(pos: number): number | null {
+    let result: number | null = null;
+    for (const w of wrapperStarts) {
+      if (w <= pos) result = w;
+      else break;
+    }
+    return result;
+  }
+  function wrapperStartAfter(pos: number): number | null {
+    for (const w of wrapperStarts) {
+      if (w > pos) return w;
+    }
+    return null;
+  }
+
+  const posts: InstagramPost[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < rawMatches.length && posts.length < 6; i++) {
+    const { index, permalink } = rawMatches[i];
+    if (seen.has(permalink)) continue;
+    seen.add(permalink);
+
+    const wrapStart = wrapperStartAtOrBefore(index);
+    const start = Math.max(wrapStart ?? index - CARD_LOOKBEHIND, index - MAX_CARD_RADIUS);
+
+    const nextPermalink = i < rawMatches.length - 1 ? rawMatches[i + 1].index : html.length;
+    const wrapEnd = wrapperStartAfter(start);
+    const end = Math.min(wrapEnd ?? nextPermalink, nextPermalink, index + MAX_CARD_RADIUS);
+
+    const card = html.slice(start, Math.max(end, start));
+
+    posts.push({
+      id: permalink,
+      permalink,
+      thumbnail: extractThumbnail(card, username),
+      caption: extractCaption(card),
+      likes: extractLikes(card),
+      comments: extractComments(card),
+      timestamp: extractTimestamp(card),
+      isVideo: looksLikeVideo(card),
+    });
+  }
+
+  return posts;
 }
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ username: string }> },
 ) {
+  let username = "yissguardians";
   try {
-    const { username } = await params;
+    ({ username } = await params);
 
-    const rsshubPosts = await fetchFromRsshub(username);
-    if (rsshubPosts && rsshubPosts.length > 0) {
-      const body: InstagramApiResponse = { posts: rsshubPosts, source: "rsshub" };
-      return NextResponse.json(body);
-    }
-
-    const instagramPosts = await fetchFromInstagram(username);
-    if (instagramPosts && instagramPosts.length > 0) {
-      const body: InstagramApiResponse = { posts: instagramPosts, source: "instagram" };
-      return NextResponse.json(body);
+    for (const mirror of MIRRORS) {
+      const html = await fetchMirrorHtml(mirror.url(username));
+      if (!html) continue;
+      const posts = parsePostsFromHtml(html, username);
+      if (posts.length > 0) {
+        const body: InstagramApiResponse = { posts, source: mirror.name };
+        return NextResponse.json(body);
+      }
     }
 
     const body: InstagramApiResponse = { posts: mocksFor(username), source: "mock" };
     return NextResponse.json(body);
   } catch {
-    const { username } = await params.catch(() => ({ username: "yissguardians" }));
     const body: InstagramApiResponse = { posts: mocksFor(username), source: "mock" };
     return NextResponse.json(body);
   }
