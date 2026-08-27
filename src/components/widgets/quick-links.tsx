@@ -14,6 +14,7 @@ import {
   Library,
   Music,
   Heart,
+  KeyRound,
 } from "lucide-react";
 import { InstagramGlyph } from "@/components/brand/icons";
 import { WidgetShell } from "./widget-shell";
@@ -28,6 +29,7 @@ type LinkItem = {
 const LINKS: LinkItem[] = [
   { label: "Schoology", url: "https://app.schoology.com", icon: BookOpen, accent: "#1c6fb8" },
   { label: "PowerSchool", url: "https://yisseoul.powerschool.com/guardian/home.html", icon: UserCheck, accent: "#0b1e3f" },
+  { label: "Clever SSO", url: "https://clever.com/oauth/authorize?channel=clever&client_id=4c63c1cf623dce82caac&confirmed=true&district_id=55b88eb4acc25b0100001158&redirect_uri=https%3A%2F%2Fclever.com%2Fin%2Fauth_callback&response_type=code&state=33624bdba788a1af73d874c98dc60d8a240fc7083bafa74d523d4d1b01708e07", icon: KeyRound, accent: "#0075c9" },
   { label: "Gmail", url: "https://mail.google.com", icon: Mail, accent: "#c5221f" },
   { label: "Calendar", url: "https://calendar.google.com", icon: CalendarDays, accent: "#1a73e8" },
   { label: "Drive", url: "https://drive.google.com", icon: HardDrive, accent: "#0f9d58" },

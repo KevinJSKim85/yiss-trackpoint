@@ -10,6 +10,10 @@ import { InstagramYisspnWidget } from "@/components/widgets/instagram-yisspn";
 import { LunchWidget } from "@/components/widgets/lunch";
 import { ClubsWidget } from "@/components/widgets/clubs";
 import { QuickLinksBoard } from "@/components/widgets/quick-links";
+import { AnnouncementsWidget } from "@/components/widgets/announcements";
+import { CollegeNewsWidget } from "@/components/widgets/college-news";
+import { YissNewsWidget } from "@/components/widgets/yiss-news";
+import { YissEventsWidget } from "@/components/widgets/yiss-events";
 
 type WidgetKey =
   | "countdown"
@@ -18,7 +22,11 @@ type WidgetKey =
   | "ig-yisspn"
   | "lunch"
   | "clubs"
-  | "quick-links";
+  | "quick-links"
+  | "announcements"
+  | "college-news"
+  | "yiss-news"
+  | "yiss-events";
 
 const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
   countdown: () => <CountdownWidget />,
@@ -28,14 +36,22 @@ const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
   lunch: () => <LunchWidget />,
   clubs: () => <ClubsWidget />,
   "quick-links": () => <QuickLinksBoard />,
+  announcements: () => <AnnouncementsWidget />,
+  "college-news": () => <CollegeNewsWidget />,
+  "yiss-news": () => <YissNewsWidget />,
+  "yiss-events": () => <YissEventsWidget />,
 };
 
 const DEFAULT_ORDER: WidgetKey[] = [
+  "announcements",
+  "yiss-news",
+  "yiss-events",
   "countdown",
   "sports",
+  "lunch",
   "ig-yiss",
   "ig-yisspn",
-  "lunch",
+  "college-news",
   "clubs",
   "quick-links",
 ];
@@ -239,7 +255,7 @@ export function DashboardGrid() {
     return (
       <div className="mx-auto w-full max-w-[1400px] px-4 pb-10 pt-4 md:px-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: DEFAULT_ORDER.length }).map((_, i) => (
             <div
               key={i}
               className="h-[360px] animate-pulse rounded-2xl bg-[color:var(--line)]/40"

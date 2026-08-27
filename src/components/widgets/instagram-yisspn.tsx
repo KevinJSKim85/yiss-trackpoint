@@ -1,37 +1,47 @@
 "use client";
 
-import { Flame } from "lucide-react";
+import useSWR from "swr";
+import { Heart, MessageCircle, Play } from "lucide-react";
 import { InstagramGlyph } from "@/components/brand/icons";
+import { relativeTime } from "@/lib/utils";
 import { WidgetShell } from "./widget-shell";
 
-const POSTS = [
-  {
-    cover: "from-[#9a2b2b] to-[#5a0e0e]",
-    motif: "🏐",
-    caption: "Guardians V volleyball sweeps TCIS 3–1 · Captain Park with 14 kills.",
-    when: "3h",
-  },
-  {
-    cover: "from-[#0b1e3f] to-[#14315f]",
-    motif: "🏀",
-    caption: "JV basketball tips off Saturday at KIS — bring your gold.",
-    when: "1d",
-  },
-  {
-    cover: "from-[#b8923a] to-[#6a4f16]",
-    motif: "🏃",
-    caption: "Cross country places 2nd at the KAIAC Invitational.",
-    when: "2d",
-  },
-];
+type InstagramPost = {
+  id: string;
+  permalink: string;
+  thumbnail: string;
+  caption: string;
+  likes: number;
+  comments: number;
+  timestamp: string;
+  isVideo: boolean;
+};
+
+type InstagramApiResponse = {
+  posts: InstagramPost[];
+  source: "rsshub" | "instagram" | "mock";
+};
+
+const PROFILE_URL = "https://www.instagram.com/yisspn/";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function InstagramYisspnWidget() {
+  const { data, error, isLoading } = useSWR<InstagramApiResponse>(
+    "/api/instagram/yisspn",
+    fetcher,
+    { refreshInterval: 1000 * 60 * 15 },
+  );
+
+  const posts = data?.posts ?? [];
+  const showEmpty = !isLoading && (!!error || posts.length === 0);
+
   return (
     <WidgetShell
       title="@yisspn"
       eyebrow="Guardians Press Network · Sports"
       accent="crimson"
-      href="https://www.instagram.com/yisspn/"
+      href={PROFILE_URL}
       hrefLabel="Follow"
 
       headerExtra={
@@ -40,32 +50,86 @@ export function InstagramYisspnWidget() {
         </span>
       }
     >
-      <div className="space-y-1.5">
-        {POSTS.map((p, i) => (
-          <a
-            key={i}
-            href="https://www.instagram.com/yisspn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center gap-2.5 rounded-lg border border-transparent p-1.5 transition hover:border-[color:var(--line)] hover:bg-[color:var(--parchment-soft)]/60"
-          >
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${p.cover} text-xl shadow-inner`}
-            >
-              {p.motif}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-[12px] leading-tight text-ink">
-                {p.caption}
-              </p>
-              <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-ink-muted">
-                <Flame className="h-2.5 w-2.5 text-[color:var(--crimson)]" />
-                {p.when} ago
-              </p>
-            </div>
-          </a>
-        ))}
-      </div>
+      {isLoading && <PostListSkeleton />}
+      {showEmpty && <EmptyState href={PROFILE_URL} />}
+      {!isLoading && !showEmpty && (
+        <ul className="space-y-1.5">
+          {posts.slice(0, 4).map((post) => (
+            <li key={post.id}>
+              <a
+                href={post.permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-2.5 rounded-lg border border-transparent p-1.5 transition hover:border-[color:var(--line)] hover:bg-[color:var(--parchment-soft)]/60"
+              >
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[color:var(--parchment-soft)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={post.thumbnail}
+                    alt={post.caption}
+                    className="h-full w-full object-cover"
+                  />
+                  {post.isVideo && (
+                    <span className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white">
+                      <Play className="h-2.5 w-2.5 fill-white" />
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-[12px] leading-tight text-ink">
+                    {post.caption}
+                  </p>
+                  <p className="mt-1 flex items-center gap-2.5 text-[10.5px] text-ink-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="h-2.5 w-2.5" />
+                      {post.likes}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageCircle className="h-2.5 w-2.5" />
+                      {post.comments}
+                    </span>
+                    <span>{relativeTime(new Date(post.timestamp))}</span>
+                  </p>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </WidgetShell>
+  );
+}
+
+function PostListSkeleton() {
+  return (
+    <ul className="space-y-1.5">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <li key={i} className="flex items-center gap-2.5 p-1.5">
+          <div className="h-12 w-12 shrink-0 animate-pulse rounded-lg bg-[color:var(--line)]" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="h-3 w-full animate-pulse rounded bg-[color:var(--line)]" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-[color:var(--line)]" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function EmptyState({ href }: { href: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 py-6 text-center">
+      <p className="text-[12px] text-ink-muted">
+        Couldn&apos;t load posts — open on Instagram
+      </p>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 rounded-full border border-[color:var(--line-strong)] px-3 py-1 text-[11px] font-medium text-ink-soft transition hover:text-ink"
+      >
+        Follow
+      </a>
+    </div>
   );
 }

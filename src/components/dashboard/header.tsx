@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Moon, Sun, RotateCcw } from "lucide-react";
 
 type HeaderProps = {
-  onResetLayout: () => void;
+  onResetLayout?: () => void;
 };
 
 export function DashboardHeader({ onResetLayout }: HeaderProps) {
@@ -31,7 +32,11 @@ export function DashboardHeader({ onResetLayout }: HeaderProps) {
     <header className="relative border-b border-[color:var(--line)] bg-[color:var(--parchment-soft)]/60 backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-5 py-3 md:px-8">
         <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-md bg-white px-2 py-1 shadow-[0_0_0_1px_rgba(11,30,63,0.08)]">
+          <Link
+            href="/"
+            aria-label="Back to Overview"
+            className="flex items-center rounded-md bg-white px-2 py-1 shadow-[0_0_0_1px_rgba(11,30,63,0.08)] transition hover:shadow-[0_0_0_1px_rgba(11,30,63,0.14)]"
+          >
             <Image
               src="/yiss-logo.jpg"
               alt="Yongsan International School of Seoul"
@@ -40,7 +45,7 @@ export function DashboardHeader({ onResetLayout }: HeaderProps) {
               priority
               className="h-6 w-auto md:h-7"
             />
-          </div>
+          </Link>
           <span className="hidden text-[10px] font-medium uppercase tracking-[0.22em] text-ink-muted md:inline">
             TrackPoint
           </span>
@@ -48,13 +53,15 @@ export function DashboardHeader({ onResetLayout }: HeaderProps) {
 
         <div className="flex items-center gap-2">
           {/* Reset is only useful at lg+ where drag is enabled. Hidden below. */}
-          <button
-            onClick={onResetLayout}
-            className="hidden items-center gap-1.5 rounded-full border border-[color:var(--line-strong)] bg-[color:var(--porcelain)] px-3.5 py-2 text-xs font-medium text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink lg:inline-flex"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset layout
-          </button>
+          {onResetLayout && (
+            <button
+              onClick={onResetLayout}
+              className="hidden items-center gap-1.5 rounded-full border border-[color:var(--line-strong)] bg-[color:var(--porcelain)] px-3.5 py-2 text-xs font-medium text-ink-soft transition hover:border-[color:var(--gold)] hover:text-ink lg:inline-flex"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset layout
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"

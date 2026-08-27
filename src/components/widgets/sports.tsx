@@ -1,48 +1,49 @@
 "use client";
 
+import useSWR from "swr";
 import { Trophy } from "lucide-react";
 import { WidgetShell } from "./widget-shell";
+import { relativeTime } from "@/lib/utils";
 
-const GAMES = [
-  {
-    sport: "Volleyball (V)",
-    opponent: "vs. SIS",
-    location: "Home",
-    date: "Fri 4/24",
-    time: "5:30 pm",
-    status: "upcoming",
-    result: null as string | null,
-  },
-  {
-    sport: "Basketball (JV)",
-    opponent: "@ KIS",
-    location: "Away",
-    date: "Sat 4/25",
-    time: "2:00 pm",
-    status: "upcoming",
-    result: null,
-  },
-  {
-    sport: "Volleyball (V)",
-    opponent: "vs. TCIS",
-    location: "Home",
-    date: "Wed 4/22",
-    time: "—",
-    status: "final",
-    result: "W 3–1",
-  },
-  {
-    sport: "Cross Country",
-    opponent: "KAIAC Invitational",
-    location: "Away",
-    date: "Mon 4/20",
-    time: "—",
-    status: "final",
-    result: "2nd",
-  },
-];
+type Kind = "recap" | "schedule" | "announcement";
+
+type AthleticsItem = {
+  id: string;
+  title: string;
+  excerpt: string;
+  url: string;
+  thumbnail: string | null;
+  published: string;
+  kind: Kind;
+};
+
+type AthleticsPayload = {
+  items: AthleticsItem[];
+  source?: string;
+  error?: string;
+};
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+const KIND_LABEL: Record<Kind, string> = {
+  recap: "Recap",
+  schedule: "Schedule",
+  announcement: "Announcement",
+};
+
+const KIND_COLOR: Record<Kind, string> = {
+  recap: "var(--sage)",
+  schedule: "var(--gold)",
+  announcement: "var(--ink-muted)",
+};
 
 export function SportsWidget() {
+  const { data, error, isLoading } = useSWR<AthleticsPayload>(
+    "/api/athletics",
+    fetcher,
+    { refreshInterval: 1000 * 60 * 15 },
+  );
+
   return (
     <WidgetShell
       title="Guardians Athletics"
@@ -50,52 +51,75 @@ export function SportsWidget() {
       accent="crimson"
       href="https://www.kaiac.org/"
       hrefLabel="KAIAC"
-
       headerExtra={
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[color:var(--line)] text-gold">
           <Trophy className="h-3 w-3" />
         </span>
       }
     >
-      <ul className="divide-y divide-[color:var(--line)]">
-        {GAMES.map((g, i) => (
-          <li key={i} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
-            <div className="flex w-14 flex-col items-center rounded-md border border-[color:var(--line)] bg-[color:var(--parchment-soft)] py-1 text-center">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-ink-muted">
-                {g.date.split(" ")[0]}
-              </span>
-              <span className="font-display text-[13px] font-semibold leading-none text-ink">
-                {g.date.split(" ")[1]}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-semibold text-ink">
-                {g.sport}
-              </p>
-              <p className="truncate text-[11px] text-ink-muted">
-                {g.opponent} · {g.location}
-              </p>
-            </div>
-            <div className="shrink-0 text-right">
-              {g.status === "final" ? (
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[10.5px] font-semibold ${
-                    g.result?.startsWith("W")
-                      ? "border-[color:var(--sage)] text-[color:var(--sage)]"
-                      : "border-[color:var(--line-strong)] text-ink-soft"
-                  }`}
-                >
-                  {g.result}
+      {isLoading && <Skeleton />}
+      {error && (
+        <p className="text-sm text-ink-muted">Could not load athletics updates.</p>
+      )}
+      {data && data.items.length === 0 && (
+        <div className="flex h-full items-center justify-center text-center text-sm text-ink-muted">
+          No recent athletics updates.
+        </div>
+      )}
+      {data && data.items.length > 0 && (
+        <ul className="divide-y divide-[color:var(--line)]">
+          {data.items.map((item) => (
+            <li key={item.id}>
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0 transition hover:opacity-80"
+              >
+                <div className="min-w-0 flex-1">
+                  <span
+                    className="mb-1 inline-block rounded-full border px-1.5 py-[1px] text-[9px] font-semibold uppercase tracking-wider"
+                    style={{
+                      borderColor: KIND_COLOR[item.kind],
+                      color: KIND_COLOR[item.kind],
+                    }}
+                  >
+                    {KIND_LABEL[item.kind]}
+                  </span>
+                  <p className="line-clamp-2 font-display text-[12.5px] font-semibold leading-snug text-ink">
+                    {item.title}
+                  </p>
+                  {item.excerpt && (
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-ink-muted">
+                      {item.excerpt}
+                    </p>
+                  )}
+                </div>
+                <span className="shrink-0 pt-0.5 text-right text-[10.5px] tabular-nums text-ink-muted">
+                  {relativeTime(new Date(item.published))}
                 </span>
-              ) : (
-                <span className="text-[11px] tabular-nums text-ink-soft">
-                  {g.time}
-                </span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </WidgetShell>
+  );
+}
+
+function Skeleton() {
+  return (
+    <ul className="divide-y divide-[color:var(--line)]">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <li key={i} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="h-3 w-16 animate-pulse rounded-full bg-[color:var(--line)]" />
+            <div className="h-3.5 w-3/4 animate-pulse rounded bg-[color:var(--line)]" />
+            <div className="h-3 w-full animate-pulse rounded bg-[color:var(--line)]" />
+          </div>
+          <div className="h-3 w-10 shrink-0 animate-pulse rounded bg-[color:var(--line)]" />
+        </li>
+      ))}
+    </ul>
   );
 }

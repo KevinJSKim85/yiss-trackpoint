@@ -1,43 +1,47 @@
 "use client";
 
-import { Heart, MessageCircle } from "lucide-react";
+import useSWR from "swr";
+import { Heart, MessageCircle, Play } from "lucide-react";
 import { InstagramGlyph } from "@/components/brand/icons";
+import { relativeTime } from "@/lib/utils";
 import { WidgetShell } from "./widget-shell";
 
-const POSTS = [
-  {
-    cover: "from-[#1a3a6b] to-[#0b1e3f]",
-    motif: "🏛️",
-    caption: "Spring concert is next Thursday — student composers take the stage.",
-    likes: 284,
-    comments: 12,
-    when: "2h",
-  },
-  {
-    cover: "from-[#b8923a] to-[#8a6b23]",
-    motif: "🎓",
-    caption: "Congrats to the Class of 2028 NHS inductees — truth, excellence, diversity.",
-    likes: 412,
-    comments: 38,
-    when: "1d",
-  },
-  {
-    cover: "from-[#5d7a5a] to-[#2e4a2e]",
-    motif: "🌿",
-    caption: "Earth Week campus clean-up — thank you Student Council.",
-    likes: 231,
-    comments: 9,
-    when: "3d",
-  },
-];
+type InstagramPost = {
+  id: string;
+  permalink: string;
+  thumbnail: string;
+  caption: string;
+  likes: number;
+  comments: number;
+  timestamp: string;
+  isVideo: boolean;
+};
+
+type InstagramApiResponse = {
+  posts: InstagramPost[];
+  source: "rsshub" | "instagram" | "mock";
+};
+
+const PROFILE_URL = "https://www.instagram.com/yissguardians/";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function InstagramYissWidget() {
+  const { data, error, isLoading } = useSWR<InstagramApiResponse>(
+    "/api/instagram/yissguardians",
+    fetcher,
+    { refreshInterval: 1000 * 60 * 15 },
+  );
+
+  const posts = data?.posts ?? [];
+  const showEmpty = !isLoading && (!!error || posts.length === 0);
+
   return (
     <WidgetShell
       title="@yissguardians"
       eyebrow="Official · Instagram"
       accent="gold"
-      href="https://www.instagram.com/yissguardians/"
+      href={PROFILE_URL}
       hrefLabel="Follow"
 
       headerExtra={
@@ -46,42 +50,86 @@ export function InstagramYissWidget() {
         </span>
       }
     >
-      <div className="grid grid-cols-3 gap-1.5">
-        {POSTS.map((p, i) => (
-          <a
-            key={i}
-            href="https://www.instagram.com/yissguardians/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br ${p.cover} text-2xl`}
-          >
-            <span className="opacity-90 grayscale-[0.1]">{p.motif}</span>
-            <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/70 via-black/10 to-transparent p-1.5 opacity-0 transition group-hover:opacity-100">
-              <div className="flex w-full items-center justify-between text-[10px] font-semibold text-white">
-                <span className="inline-flex items-center gap-0.5">
-                  <Heart className="h-3 w-3 fill-white" />
-                  {p.likes}
-                </span>
-                <span>{p.when}</span>
-              </div>
-            </div>
-          </a>
-        ))}
-      </div>
-      <p className="mt-2.5 line-clamp-2 text-[11.5px] leading-relaxed text-ink-soft">
-        {POSTS[0].caption}
-      </p>
-      <div className="mt-1.5 flex items-center gap-3 text-[10.5px] text-ink-muted">
-        <span className="inline-flex items-center gap-1">
-          <Heart className="h-3 w-3" />
-          {POSTS[0].likes}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <MessageCircle className="h-3 w-3" />
-          {POSTS[0].comments}
-        </span>
-        <span>· {POSTS[0].when} ago</span>
-      </div>
+      {isLoading && <PostListSkeleton />}
+      {showEmpty && <EmptyState href={PROFILE_URL} />}
+      {!isLoading && !showEmpty && (
+        <ul className="space-y-1.5">
+          {posts.slice(0, 4).map((post) => (
+            <li key={post.id}>
+              <a
+                href={post.permalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-2.5 rounded-lg border border-transparent p-1.5 transition hover:border-[color:var(--line)] hover:bg-[color:var(--parchment-soft)]/60"
+              >
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[color:var(--parchment-soft)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={post.thumbnail}
+                    alt={post.caption}
+                    className="h-full w-full object-cover"
+                  />
+                  {post.isVideo && (
+                    <span className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-white">
+                      <Play className="h-2.5 w-2.5 fill-white" />
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 text-[12px] leading-tight text-ink">
+                    {post.caption}
+                  </p>
+                  <p className="mt-1 flex items-center gap-2.5 text-[10.5px] text-ink-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="h-2.5 w-2.5" />
+                      {post.likes}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageCircle className="h-2.5 w-2.5" />
+                      {post.comments}
+                    </span>
+                    <span>{relativeTime(new Date(post.timestamp))}</span>
+                  </p>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </WidgetShell>
+  );
+}
+
+function PostListSkeleton() {
+  return (
+    <ul className="space-y-1.5">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <li key={i} className="flex items-center gap-2.5 p-1.5">
+          <div className="h-12 w-12 shrink-0 animate-pulse rounded-lg bg-[color:var(--line)]" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="h-3 w-full animate-pulse rounded bg-[color:var(--line)]" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-[color:var(--line)]" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function EmptyState({ href }: { href: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 py-6 text-center">
+      <p className="text-[12px] text-ink-muted">
+        Couldn&apos;t load posts — open on Instagram
+      </p>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 rounded-full border border-[color:var(--line-strong)] px-3 py-1 text-[11px] font-medium text-ink-soft transition hover:text-ink"
+      >
+        Follow
+      </a>
+    </div>
   );
 }
