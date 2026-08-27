@@ -4,11 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { CountdownWidget } from "@/components/widgets/countdown";
-import { GmailWidget } from "@/components/widgets/gmail";
-import { CalendarWidget } from "@/components/widgets/calendar";
-import { DriveWidget } from "@/components/widgets/drive";
-import { SchoologyWidget } from "@/components/widgets/schoology";
-import { PowerSchoolWidget } from "@/components/widgets/powerschool";
 import { SportsWidget } from "@/components/widgets/sports";
 import { InstagramYissWidget } from "@/components/widgets/instagram-yiss";
 import { InstagramYisspnWidget } from "@/components/widgets/instagram-yisspn";
@@ -18,11 +13,6 @@ import { QuickLinksBoard } from "@/components/widgets/quick-links";
 
 type WidgetKey =
   | "countdown"
-  | "gmail"
-  | "calendar"
-  | "drive"
-  | "schoology"
-  | "powerschool"
   | "sports"
   | "ig-yiss"
   | "ig-yisspn"
@@ -32,11 +22,6 @@ type WidgetKey =
 
 const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
   countdown: () => <CountdownWidget />,
-  gmail: () => <GmailWidget />,
-  calendar: () => <CalendarWidget />,
-  drive: () => <DriveWidget />,
-  schoology: () => <SchoologyWidget />,
-  powerschool: () => <PowerSchoolWidget />,
   sports: () => <SportsWidget />,
   "ig-yiss": () => <InstagramYissWidget />,
   "ig-yisspn": () => <InstagramYisspnWidget />,
@@ -47,11 +32,6 @@ const WIDGETS: Record<WidgetKey, () => React.ReactNode> = {
 
 const DEFAULT_ORDER: WidgetKey[] = [
   "countdown",
-  "calendar",
-  "gmail",
-  "drive",
-  "schoology",
-  "powerschool",
   "sports",
   "ig-yiss",
   "ig-yisspn",
