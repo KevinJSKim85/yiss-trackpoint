@@ -1,6 +1,7 @@
 "use client";
 
 import { WidgetShell } from "./widget-shell";
+import { relativeTime } from "@/lib/utils";
 
 type Role = "STUCO" | "PRINCIPAL" | "FACULTY" | "ATHLETICS";
 
@@ -9,44 +10,36 @@ type Announcement = {
   role: Role;
   title: string;
   body: string;
-  time: string;
+  date: string;
 };
 
+// No public YISS announcements feed exists (these come from internal
+// Schoology/homeroom posts, not the Squarespace site), so this stays a
+// curated mock list. Refresh the dates + copy by hand every so often to keep
+// it feeling current — keep each entry within the last ~7 days.
+//
+// Content last reviewed: 2026-09-03
 const ANNOUNCEMENTS: Announcement[] = [
   {
     author: "STUCO",
     role: "STUCO",
-    title: "Dress-down day Friday — Guardians colors",
-    body: "Wear navy & gold to support the volleyball playoffs. Lanyards still required.",
-    time: "2h ago",
+    title: "Club Fair signups open this week",
+    body: "Browse 30+ clubs on the Commons lawn Thu/Fri at lunch. New members welcome through Sept 12.",
+    date: "2026-09-03T02:00:00Z",
   },
   {
-    author: "Dr. Park",
+    author: "Principal Park",
     role: "PRINCIPAL",
-    title: "Semester exams countdown",
-    body: "Study hall extended to 5:30 PM in the library through next week.",
-    time: "Yesterday",
+    title: "First all-school assembly Friday morning",
+    body: "Arrive by 8:10 AM sharp — gymnasium doors close for the semester-opening assembly.",
+    date: "2026-09-02T04:00:00Z",
   },
   {
-    author: "Ms. Henderson",
-    role: "FACULTY",
-    title: "Beloved seminar seating chart posted",
-    body: "Please check Schoology; new seating starts Wednesday.",
-    time: "Wed",
-  },
-  {
-    author: "Athletics",
+    author: "Coach Parker",
     role: "ATHLETICS",
-    title: "KAIAC Volleyball — away game logistics",
-    body: "Bus leaves Friday at 2:35 PM sharp from lot B. Bring your jersey and warm-up.",
-    time: "Tue",
-  },
-  {
-    author: "Guardian Council",
-    role: "STUCO",
-    title: "Guardians Give Back drive begins Monday",
-    body: "Drop off canned goods at the main office. Homerooms compete for the trophy.",
-    time: "Mon",
+    title: "KAIAC fall season practice schedule posted",
+    body: "Volleyball and cross country practice times are live on the Athletics page; tryout results go out Thursday.",
+    date: "2026-08-31T06:00:00Z",
   },
 ];
 
@@ -91,7 +84,7 @@ export function AnnouncementsWidget() {
                   </span>
                 </div>
                 <span className="shrink-0 text-[11px] text-ink-muted">
-                  {a.time}
+                  {relativeTime(new Date(a.date))}
                 </span>
               </div>
               <p className="truncate text-[12.5px] font-medium text-ink">

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
 // Curated/mock higher-ed & college-admissions news for the "College News"
-// widget. MVP: static list below, refreshed by hand. Swap the body of the
-// try block for a real fetcher (RSS aggregator / partner API) later — keep
-// the response shape (`{ items: CollegeNewsItem[] }`) stable so the widget
-// doesn't need to change.
+// widget. No single no-auth live feed aggregates these outlets, so this MVP
+// stays a static list, refreshed by hand on a rolling basis. Swap the body of
+// the try block for a real fetcher (RSS aggregator / partner API) later —
+// keep the response shape (`{ items: CollegeNewsItem[] }`) stable so the
+// widget doesn't need to change.
 //
-// Content last reviewed: 2026-08-27
+// Content last reviewed: 2026-09-03
 
 export const revalidate = 3600;
 
@@ -35,7 +36,7 @@ const ITEMS: CollegeNewsItem[] = [
     blurb:
       "The core personal-statement prompts carry over largely unchanged for the new cycle, giving rising seniors a head start on drafting before fall deadlines open.",
     url: "https://www.commonapp.org/",
-    published: "2026-08-25T13:00:00Z",
+    published: "2026-09-02T13:00:00Z",
     category: "admissions",
   },
   {
@@ -45,7 +46,7 @@ const ITEMS: CollegeNewsItem[] = [
     blurb:
       "The nonprofit application platform is welcoming new partner colleges and refreshing its portfolio tools as more campuses join alongside the Common App.",
     url: "https://www.insidehighered.com/",
-    published: "2026-08-24T10:00:00Z",
+    published: "2026-09-01T10:00:00Z",
     category: "campus",
   },
   {
@@ -55,7 +56,7 @@ const ITEMS: CollegeNewsItem[] = [
     blurb:
       "Families should see the form open on its usual fall schedule, following several recent cycles of delays and processing fixes.",
     url: "https://www.usnews.com/education",
-    published: "2026-08-22T15:30:00Z",
+    published: "2026-08-30T15:30:00Z",
     category: "scholarship",
   },
   {
@@ -65,7 +66,7 @@ const ITEMS: CollegeNewsItem[] = [
     blurb:
       "Several highly selective schools are re-examining standardized-testing requirements after reviewing multiple admissions cycles of data.",
     url: "https://www.chronicle.com/",
-    published: "2026-08-20T09:00:00Z",
+    published: "2026-08-28T09:00:00Z",
     category: "policy",
   },
   {
@@ -76,7 +77,7 @@ const ITEMS: CollegeNewsItem[] = [
     blurb:
       "Counselors note some of the largest automatic awards require a completed application weeks before each school's general deadline.",
     url: "https://www.usnews.com/education",
-    published: "2026-08-19T12:00:00Z",
+    published: "2026-08-27T12:00:00Z",
     category: "scholarship",
   },
   {
@@ -86,7 +87,7 @@ const ITEMS: CollegeNewsItem[] = [
     blurb:
       "New counseling-office survey data shows binding early rounds are admitting a larger share of the incoming class at many private colleges.",
     url: "https://www.nacacnet.org/",
-    published: "2026-08-14T08:00:00Z",
+    published: "2026-08-22T08:00:00Z",
     category: "college-life",
   },
 ];

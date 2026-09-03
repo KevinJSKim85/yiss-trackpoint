@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Python scraper venv (Instagram snapshots — see scripts/refresh_instagram.py)
+.venv-ig/
+
+# NOTE: public/instagram/**/*.jpg and posts.json ARE committed on purpose;
+# they are the static snapshot served by /api/instagram/<username>.
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

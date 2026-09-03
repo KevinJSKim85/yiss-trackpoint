@@ -19,7 +19,11 @@ type InstagramPost = {
 
 type InstagramApiResponse = {
   posts: InstagramPost[];
-  source: "rsshub" | "instagram" | "mock";
+  // Snapshot lives in public/instagram/yissguardians/posts.json; the API
+  // reports "no-snapshot" when the file is missing / empty so the widget
+  // can render its Follow-only empty state instead of a broken grid.
+  source: "snapshot" | "no-snapshot";
+  fetchedAt?: string;
 };
 
 const PROFILE_URL = "https://www.instagram.com/yissguardians/";

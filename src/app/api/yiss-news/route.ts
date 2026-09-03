@@ -7,6 +7,8 @@ const USER_AGENT =
 
 export const revalidate = 900;
 
+const FETCH_TIMEOUT_MS = 15000;
+
 type NewsItem = {
   id: string;
   title: string;
@@ -70,10 +72,13 @@ function normalize(raw: SquarespaceNewsItem, index: number): NewsItem {
 }
 
 export async function GET() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(NEWS_URL, {
       headers: { "User-Agent": USER_AGENT },
-      next: { revalidate: 900 },
+      signal: controller.signal,
+      next: { revalidate: 86400, tags: ["yiss-news"] },
     });
     if (!res.ok) throw new Error(`YISS news ${res.status}`);
     const raw = await res.json();
@@ -91,5 +96,7 @@ export async function GET() {
     return NextResponse.json({ items, count: items.length });
   } catch (e) {
     return NextResponse.json({ items: [], count: 0, error: String(e) });
+  } finally {
+    clearTimeout(timer);
   }
 }

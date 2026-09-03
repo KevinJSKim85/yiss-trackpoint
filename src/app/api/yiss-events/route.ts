@@ -7,6 +7,8 @@ const USER_AGENT =
 
 export const revalidate = 900;
 
+const FETCH_TIMEOUT_MS = 15000;
+
 type EventItem = {
   id: string;
   title: string;
@@ -84,10 +86,13 @@ function normalize(raw: SquarespaceEventItem, index: number): EventItem {
 }
 
 export async function GET() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(EVENTS_URL, {
       headers: { "User-Agent": USER_AGENT },
-      next: { revalidate: 900 },
+      signal: controller.signal,
+      next: { revalidate: 86400, tags: ["yiss-events"] },
     });
     if (!res.ok) throw new Error(`YISS events ${res.status}`);
     const raw = await res.json();
@@ -114,5 +119,7 @@ export async function GET() {
     return NextResponse.json({ items, count: items.length });
   } catch (e) {
     return NextResponse.json({ items: [], count: 0, error: String(e) });
+  } finally {
+    clearTimeout(timer);
   }
 }

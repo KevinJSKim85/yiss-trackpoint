@@ -34,3 +34,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Instagram snapshots
+
+The `@yissguardians` and `@yisspn` widgets do **not** scrape Instagram at
+request time. A committed snapshot under `public/instagram/<username>/`
+(a `posts.json` plus one `.jpg` per post) is served through
+`/api/instagram/<username>` as static edge cache.
+
+**Refresh locally** (one-off, useful when Instagram blocks CI):
+
+```bash
+python3 -m venv .venv-ig
+.venv-ig/bin/pip install curl_cffi Pillow
+.venv-ig/bin/python scripts/refresh_instagram.py
+```
+
+The script writes new thumbnails + JSON into `public/instagram/`; commit
+the changes to see them in production. On failure (rate-limit, login
+wall) it prints a warning and leaves the previous snapshot in place.
+
+**Refresh automatically:** `.github/workflows/refresh-instagram.yml`
+runs the same script daily at 05:00 KST (20:00 UTC) and commits the
+result. A manual button is exposed via `workflow_dispatch` in the
+Actions tab.
+

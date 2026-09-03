@@ -21,6 +21,8 @@ const USER_AGENT =
 
 export const revalidate = 900;
 
+const FETCH_TIMEOUT_MS = 15000;
+
 type Kind = "recap" | "schedule" | "announcement";
 
 type AthleticsItem = {
@@ -114,10 +116,13 @@ function mockItems(): AthleticsItem[] {
 export async function GET() {
   try {
     for (const url of CANDIDATE_SOURCES) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
         const res = await fetch(url, {
           headers: { "User-Agent": USER_AGENT },
-          next: { revalidate: 900 },
+          signal: controller.signal,
+          next: { revalidate: 86400, tags: ["athletics"] },
         });
         if (!res.ok) continue;
 
@@ -163,6 +168,8 @@ export async function GET() {
         return NextResponse.json({ items, source: url });
       } catch {
         continue;
+      } finally {
+        clearTimeout(timer);
       }
     }
 
