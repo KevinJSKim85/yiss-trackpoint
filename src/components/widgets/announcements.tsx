@@ -61,13 +61,13 @@ export function AnnouncementsWidget() {
     >
       <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
         {ANNOUNCEMENTS.slice(0, 3).map((a, i) => (
-          <li key={i} className="flex gap-2.5 py-3 first:pt-0 last:pb-0">
+          <li key={i} className="flex gap-2.5 py-3.5 first:pt-1 last:pb-1">
             <div
               className="w-[1.5px] shrink-0 rounded-full"
               style={{ background: ROLE_COLOR[a.role] }}
               aria-hidden
             />
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate text-[11px] font-semibold text-ink">
@@ -87,10 +87,10 @@ export function AnnouncementsWidget() {
                   {relativeTime(new Date(a.date))}
                 </span>
               </div>
-              <p className="truncate text-[12.5px] font-medium text-ink">
+              <p className="mt-1.5 line-clamp-2 font-display text-[13px] font-semibold leading-snug text-ink md:text-sm">
                 {a.title}
               </p>
-              <p className="line-clamp-1 text-xs leading-relaxed text-ink-soft">
+              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-muted">
                 {a.body}
               </p>
             </div>

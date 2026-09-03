@@ -42,6 +42,15 @@ request time. A committed snapshot under `public/instagram/<username>/`
 (a `posts.json` plus one `.jpg` per post) is served through
 `/api/instagram/<username>` as static edge cache.
 
+**How the scraper reaches Instagram.** Instagram closed all public API
+endpoints (`web_profile_info`, `feed/user`, `graphql`) behind a
+`require_login` 401 wall in 2025. `scripts/refresh_instagram.py` now
+fetches the public HTML pages instead (`/<username>/` and each
+`/p/<shortcode>/`) and parses post data out of the Open Graph meta
+tags. Plain `curl`/`urllib` are blocked at the TLS layer, so the
+scraper uses [`curl_cffi`](https://github.com/lexiforest/curl_cffi)
+with Safari impersonation to present a real browser fingerprint.
+
 **Refresh locally** (one-off, useful when Instagram blocks CI):
 
 ```bash
@@ -58,4 +67,19 @@ wall) it prints a warning and leaves the previous snapshot in place.
 runs the same script daily at 05:00 KST (20:00 UTC) and commits the
 result. A manual button is exposed via `workflow_dispatch` in the
 Actions tab.
+
+**Optional login fallback.** If Instagram starts 401-ing GitHub
+Actions' Azure IPs on the HTML routes too, add an `INSTAGRAM_SESSIONID`
+repo secret with a real logged-in `sessionid` cookie value — the
+scraper (and the workflow) will use it automatically:
+
+1. Sign in to <https://instagram.com/> in a browser.
+2. Open DevTools → Application → Cookies → `https://www.instagram.com`.
+3. Copy the value of the `sessionid` cookie.
+4. GitHub repo → Settings → Secrets and variables → Actions → New
+   repository secret. Name it exactly `INSTAGRAM_SESSIONID`, paste the
+   cookie value. **Do not commit the cookie.**
+
+Session cookies rotate every few weeks — if the scraper starts failing
+again, refresh the secret with a fresh cookie.
 

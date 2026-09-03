@@ -63,12 +63,12 @@ export function YissEventsWidget() {
             const start = new Date(item.startDate);
             const today = isToday(start, now);
             return (
-              <li key={item.id}>
+              <li key={item.id} className="py-3.5 first:pt-1 last:pb-1">
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`flex gap-3 rounded-lg px-1 py-3 first:pt-0 last:pb-0 transition hover:bg-[color:var(--parchment-soft)]/60 ${
+                  className={`flex gap-3 rounded-lg px-1 transition hover:bg-[color:var(--parchment-soft)]/60 ${
                     today ? "bg-[color:var(--parchment-soft)]" : ""
                   }`}
                 >
@@ -87,7 +87,7 @@ export function YissEventsWidget() {
                     </span>
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <p className="font-display line-clamp-1 text-[13px] font-semibold leading-snug text-ink">
+                    <p className="font-display line-clamp-2 text-[13px] font-semibold leading-snug text-ink md:text-sm">
                       {item.title}
                     </p>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-ink-muted">

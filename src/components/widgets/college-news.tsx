@@ -77,8 +77,8 @@ export function CollegeNewsWidget() {
       {!isLoading && !error && items.length > 0 && (
         <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
           {items.slice(0, 3).map((item) => (
-            <li key={item.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
-              <div className="flex items-center gap-1.5">
+            <li key={item.id} className="py-3.5 first:pt-1 last:pb-1">
+              <div className="flex items-center justify-between gap-2">
                 <span
                   className="inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
                   style={{
@@ -88,17 +88,18 @@ export function CollegeNewsWidget() {
                 >
                   {CATEGORY_LABEL[item.category]}
                 </span>
-                <p className="line-clamp-1 min-w-0 flex-1 font-display text-sm font-semibold leading-snug text-ink">
-                  {item.title}
-                </p>
+                <span className="shrink-0 text-[10px] text-ink-muted">
+                  {timeAgo(item.published)}
+                </span>
               </div>
-              <p className="line-clamp-1 text-xs leading-relaxed text-ink-soft">
+              <p className="mt-1.5 line-clamp-2 font-display text-[13px] font-semibold leading-snug text-ink md:text-sm">
+                {item.title}
+              </p>
+              <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-ink-muted">
                 {item.blurb}
               </p>
-              <div className="flex items-center justify-between gap-2 text-[11px] text-ink-muted">
-                <span className="truncate">
-                  {item.source} · {timeAgo(item.published)}
-                </span>
+              <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] text-ink-muted">
+                <span className="truncate">{item.source}</span>
                 <a
                   href={item.url}
                   target="_blank"

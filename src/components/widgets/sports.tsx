@@ -69,14 +69,14 @@ export function SportsWidget() {
       {data && data.items.length > 0 && (
         <ul className="divide-y divide-[color:var(--line)] overflow-hidden">
           {data.items.slice(0, 3).map((item) => (
-            <li key={item.id}>
+            <li key={item.id} className="py-3.5 first:pt-1 last:pb-1">
               <a
                 href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col gap-1.5 rounded-md py-3 first:pt-0 last:pb-0 transition hover:bg-[color:var(--parchment-soft)]/60"
+                className="block rounded-md transition hover:bg-[color:var(--parchment-soft)]/60"
               >
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-between gap-2">
                   <span
                     className="shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider"
                     style={{
@@ -86,18 +86,13 @@ export function SportsWidget() {
                   >
                     {KIND_LABEL[item.kind]}
                   </span>
-                  <p className="line-clamp-1 min-w-0 flex-1 font-display text-[12.5px] font-semibold leading-snug text-ink">
-                    {item.title}
-                  </p>
                   <span className="shrink-0 text-[10px] tabular-nums text-ink-muted">
                     {relativeTime(new Date(item.published))}
                   </span>
                 </div>
-                {item.excerpt && (
-                  <p className="line-clamp-1 text-xs leading-relaxed text-ink-muted">
-                    {item.excerpt}
-                  </p>
-                )}
+                <p className="mt-1.5 line-clamp-2 font-display text-[13px] font-semibold leading-snug text-ink md:text-sm">
+                  {item.title}
+                </p>
               </a>
             </li>
           ))}

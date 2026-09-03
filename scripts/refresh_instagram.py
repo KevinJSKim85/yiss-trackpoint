@@ -1,15 +1,37 @@
 #!/usr/bin/env python3
 """Snapshot @yissguardians and @yisspn Instagram feeds into public/instagram/.
 
-Instagram CDN image URLs are signed and expire, so post thumbnails are
-downloaded to `public/instagram/<username>/<shortcode>.jpg` and a companion
-`posts.json` is written next to them. The Next.js API route reads these
-static files at build time — no runtime scraping, no dependency on
-Instagram availability from Vercel edge nodes.
+Instagram closed public API endpoints (web_profile_info, feed/user, graphql)
+behind a `require_login` 401 wall in 2025. The public *HTML* pages
+(`/<username>/` and `/p/<shortcode>/`) still render server-side without
+login — but only when the client presents a real browser TLS fingerprint,
+so we fetch them through `curl_cffi` with Safari impersonation. Plain
+`curl` and `urllib` are blocked at the TLS layer even before the login
+check runs.
 
-Rate-limit / login-wall responses are swallowed: on failure the previous
-snapshot is left in place and the process exits 0 so a scheduled CI run
-never fails the workflow.
+Data flow per user:
+  1. GET `/<username>/`                    — HTML profile grid; extract
+                                             shortcodes from `<a href=".../p/CODE/">`
+                                             cards (server-rendered).
+  2. GET `/p/<shortcode>/` per post        — parse Open Graph meta tags:
+       - og:image        → thumbnail URL (CDN, signed, expires)
+       - og:video        → presence marks isVideo
+       - og:description  → "N likes, M comments - USER on DATE: \"CAPTION\""
+                           (single string carries counts, date, caption)
+  3. Download thumbnail to
+     `public/instagram/<username>/<shortcode>.jpg` (CDN URLs expire so we
+     cannot store the signed URL).
+  4. Write `public/instagram/<username>/posts.json` in the schema the
+     Next.js `/api/instagram/<username>` route reads.
+
+Optional login (Instagram may throttle/challenge even the HTML path from
+some IPs): set `INSTAGRAM_SESSIONID` in the environment to a valid
+`sessionid` cookie (grab it from a real logged-in browser session at
+instagram.com). The scraper still works without it against most Public
+profiles; the cookie only kicks in when a request 401s.
+
+Failures are swallowed so scheduled CI never fails the workflow — the
+previous snapshot is left in place until the next successful run.
 
 Usage (local):
     python3 -m venv .venv-ig
@@ -20,10 +42,10 @@ Usage (GitHub Actions): see .github/workflows/refresh-instagram.yml
 """
 from __future__ import annotations
 
+import html as htmllib
 import json
 import os
 import re
-import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -35,50 +57,43 @@ USERS = ["yissguardians", "yisspn"]
 N_POSTS = 6
 CAPTION_LIMIT = 200
 THUMB_MAX_WIDTH = 400
+REQUEST_DELAY = 1.5  # seconds between requests to the same host
 
-UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/126 Safari/537.36"
-)
-IG_APP_ID = {"x-ig-app-id": "936619743392459"}
-
-
-def _get_bytes(url: str, headers: dict[str, str] | None = None) -> bytes:
-    """Plain curl — used for Instagram CDN image downloads.
-
-    curl avoids the missing-CA-bundle issue in framework Python builds
-    and does not need TLS fingerprint impersonation for the fbcdn hosts.
-    """
-    cmd = ["curl", "-sfL", "--http1.1", "--max-time", "30", "-A", UA]
-    for k, v in (headers or {}).items():
-        cmd += ["-H", f"{k}: {v}"]
-    cmd.append(url)
-    last_err = None
-    for attempt in range(3):
-        r = subprocess.run(cmd, capture_output=True)
-        if r.returncode == 0:
-            return r.stdout
-        last_err = r
-        time.sleep(2 * (attempt + 1))
-    raise RuntimeError(
-        f"curl failed ({last_err.returncode if last_err else '?'}) for {url}"
-    )
+# Optional session cookie: set INSTAGRAM_SESSIONID to a real logged-in
+# `sessionid` from a browser to bypass the anonymous throttle when IG
+# returns 401/429 on the HTML endpoints.
+SESSIONID = os.environ.get("INSTAGRAM_SESSIONID", "").strip()
 
 
-def _get_ig(url: str) -> bytes:
-    """curl_cffi with Safari impersonation for Instagram's own API endpoints.
+def _get_html(url: str) -> str:
+    """Fetch an Instagram HTML page as Safari.
 
-    Instagram resets plain-curl TLS fingerprints on the API paths; the
-    CDN image hosts (scontent-*.cdninstagram.com / fbcdn.net) are fine
-    with the plain curl above.
+    Instagram rejects plain-curl / urllib TLS fingerprints on the
+    public HTML routes; curl_cffi's `impersonate="safari"` mimics a
+    real Safari handshake and passes.
     """
     from curl_cffi import requests as cffi_requests  # local import: optional dep
 
-    resp = cffi_requests.get(url, headers=IG_APP_ID, impersonate="safari", timeout=30)
+    cookies = {"sessionid": SESSIONID} if SESSIONID else None
+    resp = cffi_requests.get(
+        url,
+        impersonate="safari",
+        timeout=30,
+        allow_redirects=True,
+        cookies=cookies,
+    )
     if resp.status_code != 200:
-        raise RuntimeError(
-            f"HTTP {resp.status_code}: {resp.text[:200] if hasattr(resp, 'text') else ''}"
-        )
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:200]}")
+    return resp.text
+
+
+def _get_bytes(url: str) -> bytes:
+    """Fetch CDN image bytes via curl_cffi (fbcdn accepts curl_cffi cleanly)."""
+    from curl_cffi import requests as cffi_requests
+
+    resp = cffi_requests.get(url, impersonate="safari", timeout=30, allow_redirects=True)
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code} on CDN fetch")
     return resp.content
 
 
@@ -86,7 +101,7 @@ def _maybe_resize(path: str) -> None:
     """Shrink downloaded JPEG to THUMB_MAX_WIDTH if Pillow is available.
 
     Pillow is best-effort; if it is missing, the raw download is kept
-    as-is — the repo is still small enough with 6 posts × 2 accounts.
+    as-is — the repo is still small enough with 6 posts x 2 accounts.
     """
     try:
         from PIL import Image
@@ -111,75 +126,112 @@ def _download_thumb(url: str, out_path: str) -> None:
     _maybe_resize(out_path)
 
 
-def _via_profile_api(username: str) -> list[dict]:
-    """Primary: web_profile_info JSON endpoint used by instagram.com itself."""
-    url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
-    user = json.loads(_get_ig(url))["data"]["user"]
-    posts: list[dict] = []
-    for edge in user["edge_owner_to_timeline_media"]["edges"][:N_POSTS]:
-        node = edge["node"]
-        caption_edges = node.get("edge_media_to_caption", {}).get("edges", [])
-        caption = caption_edges[0]["node"]["text"] if caption_edges else ""
-        posts.append({
-            "id": node["id"],
-            "shortcode": node["shortcode"],
-            "permalink": f"https://www.instagram.com/p/{node['shortcode']}/",
-            "caption": caption[:CAPTION_LIMIT],
-            "like_count": node.get("edge_liked_by", {}).get("count")
-                or node.get("edge_media_preview_like", {}).get("count", 0),
-            "comment_count": node.get("edge_media_to_comment", {}).get("count", 0),
-            "timestamp": datetime.fromtimestamp(
-                node["taken_at_timestamp"], tz=timezone.utc
-            ).isoformat().replace("+00:00", "Z"),
-            "is_video": bool(node.get("is_video")),
-            "thumbnail_url": node["display_url"],
-        })
-    return posts
+# Card cell in the profile-page grid links to /<username>/p/<shortcode>/;
+# Reels use /<username>/reel/<shortcode>/. We accept both.
+_SHORTCODE_RE = re.compile(r'href="/[^"/]+/(?:p|reel)/([A-Za-z0-9_-]{5,20})/"')
 
 
-def _resolve_profile_id(username: str) -> str:
-    html = _get_bytes(f"https://www.instagram.com/{username}/").decode("utf-8", "replace")
-    m = re.search(r'"profile_id":"(\d+)"', html) or re.search(r"profilePage_(\d+)", html)
-    if not m:
-        raise RuntimeError("could not resolve numeric profile id from html")
-    return m.group(1)
+def _extract_shortcodes(profile_html: str) -> list[str]:
+    seen: list[str] = []
+    for m in _SHORTCODE_RE.finditer(profile_html):
+        code = m.group(1)
+        if code not in seen:
+            seen.append(code)
+    return seen
 
 
-def _via_feed_api(username: str) -> list[dict]:
-    """Fallback: mobile-web feed endpoint (works when web_profile_info 400s)."""
-    uid = _resolve_profile_id(username)
-    data = json.loads(_get_ig(f"https://i.instagram.com/api/v1/feed/user/{uid}/?count=12"))
-    posts: list[dict] = []
-    for item in data.get("items", [])[:N_POSTS]:
-        media = item.get("carousel_media", [item])[0]
-        candidates = media.get("image_versions2", {}).get("candidates", [])
-        if not candidates:
-            continue
-        caption_obj = item.get("caption") or {}
-        posts.append({
-            "id": str(item.get("pk") or item.get("id") or item["code"]),
-            "shortcode": item["code"],
-            "permalink": f"https://www.instagram.com/p/{item['code']}/",
-            "caption": (caption_obj.get("text") or "")[:CAPTION_LIMIT],
-            "like_count": item.get("like_count", 0),
-            "comment_count": item.get("comment_count", 0),
-            "timestamp": datetime.fromtimestamp(
-                item.get("taken_at", int(time.time())), tz=timezone.utc
-            ).isoformat().replace("+00:00", "Z"),
-            "is_video": item.get("media_type") == 2,
-            "thumbnail_url": candidates[0]["url"],
-        })
-    if not posts:
-        raise RuntimeError("feed endpoint returned no renderable items")
-    return posts
+# Meta tags on `/p/<shortcode>/` server-rendered HTML.
+_META_RE = {
+    "og_image": re.compile(r'<meta property="og:image" content="([^"]+)"'),
+    "og_video": re.compile(r'<meta property="og:video" content="([^"]+)"'),
+    "og_desc": re.compile(r'<meta property="og:description" content="([^"]+)"'),
+    "og_title": re.compile(r'<meta property="og:title" content="([^"]+)"'),
+}
+
+# og:description shape from Instagram post pages:
+#   "128 likes, 0 comments - yissguardians on August 31, 2026: "..caption..""
+# Digits may include thousands separators (e.g. "1,234 likes").
+_DESC_RE = re.compile(
+    r'([\d,]+)\s+likes?,\s+([\d,]+)\s+comments?\s+-\s+([^\s]+)\s+on\s+([A-Za-z]+ \d{1,2},\s*\d{4})(?::\s*"?(.*))?',
+    re.DOTALL,
+)
+
+
+def _parse_int(s: str) -> int:
+    return int(s.replace(",", "")) if s else 0
+
+
+def _parse_date(s: str) -> str:
+    """'August 31, 2026' -> '2026-08-31T00:00:00Z' (date-only; noon of the
+    posted day is unavailable from OG meta without the API)."""
+    try:
+        dt = datetime.strptime(s.strip(), "%B %d, %Y").replace(tzinfo=timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
+    except Exception:
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _fetch_post_meta(shortcode: str) -> dict | None:
+    url = f"https://www.instagram.com/p/{shortcode}/"
+    try:
+        html = _get_html(url)
+    except Exception as exc:
+        print(f"  IG {shortcode} detail fetch failed ({exc}); skipping")
+        return None
+
+    meta = {name: (m.group(1) if (m := rx.search(html)) else "") for name, rx in _META_RE.items()}
+    if not meta["og_image"]:
+        print(f"  IG {shortcode} missing og:image; skipping")
+        return None
+
+    desc = htmllib.unescape(meta["og_desc"] or meta["og_title"] or "")
+    like_count = comment_count = 0
+    caption = ""
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    m = _DESC_RE.search(desc)
+    if m:
+        like_count = _parse_int(m.group(1))
+        comment_count = _parse_int(m.group(2))
+        timestamp = _parse_date(m.group(4))
+        caption = (m.group(5) or "").strip().strip('"').strip()
+    else:
+        # og:title fallback: 'Username on Instagram: "caption"'
+        t = htmllib.unescape(meta["og_title"] or "")
+        cm = re.search(r'on Instagram:\s*"?(.*)', t, re.DOTALL)
+        if cm:
+            caption = cm.group(1).strip().strip('"').strip()
+
+    return {
+        "shortcode": shortcode,
+        "permalink": f"https://www.instagram.com/p/{shortcode}/",
+        "caption": caption[:CAPTION_LIMIT],
+        "like_count": like_count,
+        "comment_count": comment_count,
+        "timestamp": timestamp,
+        "is_video": bool(meta["og_video"]),
+        "thumbnail_url": htmllib.unescape(meta["og_image"]),
+    }
 
 
 def _fetch_posts(username: str) -> list[dict]:
-    try:
-        return _via_profile_api(username)
-    except Exception as exc:
-        print(f"  web_profile_info failed ({exc}); trying feed endpoint")
-        return _via_feed_api(username)
+    profile_html = _get_html(f"https://www.instagram.com/{username}/")
+    codes = _extract_shortcodes(profile_html)
+    if not codes:
+        raise RuntimeError("no shortcodes found in profile HTML (layout changed or login wall)")
+    print(f"  found {len(codes)} shortcodes; fetching top {min(N_POSTS, len(codes))}")
+
+    posts: list[dict] = []
+    for code in codes[:N_POSTS]:
+        time.sleep(REQUEST_DELAY)
+        meta = _fetch_post_meta(code)
+        if meta:
+            # synthetic numeric id — the widget only needs uniqueness for React keys
+            meta["id"] = code
+            posts.append(meta)
+    if not posts:
+        raise RuntimeError("all post-detail fetches failed")
+    return posts
 
 
 def refresh_user(username: str) -> bool:
@@ -202,7 +254,7 @@ def refresh_user(username: str) -> bool:
         local_path = os.path.join(out_dir, local_name)
         try:
             _download_thumb(p["thumbnail_url"], local_path)
-            print(f"  IG {code} saved")
+            print(f"  IG {code} saved (likes={p['like_count']}, comments={p['comment_count']})")
         except Exception as exc:
             print(f"  IG {code} thumb download failed ({exc}); skipping post")
             continue

@@ -34,6 +34,12 @@ jobs:
       - name: Run scraper
         # Scraper is designed to exit 0 even on Instagram-side failures;
         # `|| true` is belt-and-suspenders so a hard crash never fails CI.
+        # Optional: set INSTAGRAM_SESSIONID as a repo secret so the
+        # scraper can fall back to an authenticated session when
+        # anonymous HTML fetches get 401/challenged. Leave the secret
+        # unset for anonymous scraping — the scraper handles both.
+        env:
+          INSTAGRAM_SESSIONID: ${{ secrets.INSTAGRAM_SESSIONID }}
         run: python scripts/refresh_instagram.py || true
 
       - name: Commit snapshot changes
