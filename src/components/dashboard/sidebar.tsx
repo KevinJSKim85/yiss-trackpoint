@@ -203,7 +203,7 @@ export function Sidebar() {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useLocalStorage<boolean>(
     "yiss-sidebar-collapsed",
-    false,
+    true,
   );
 
   useEffect(() => {
