@@ -80,7 +80,7 @@ const WEEKDAY_MENUS: Record<number, { menu: MenuLine[]; tags: string[] }> = {
   },
   5: {
     menu: [
-      { k: "Main", v: "Korean fried chicken" },
+      { k: "Main", v: "Beef bulgogi bowl" },
       { k: "Alt", v: "Veggie kimbap" },
       { k: "Soup", v: "Ramyeon bar" },
       { k: "Side", v: "Kimchi · corn salad" },

@@ -18,28 +18,28 @@ type Announcement = {
 // curated mock list. Refresh the dates + copy by hand every so often to keep
 // it feeling current — keep each entry within the last ~7 days.
 //
-// Content last reviewed: 2026-09-03
+// Content last reviewed: 2026-09-11
 const ANNOUNCEMENTS: Announcement[] = [
   {
     author: "STUCO",
     role: "STUCO",
-    title: "Club Fair signups open this week",
-    body: "Browse 30+ clubs on the Commons lawn Thu/Fri at lunch. New members welcome through Sept 12.",
-    date: "2026-09-03T02:00:00Z",
-  },
-  {
-    author: "Principal Park",
-    role: "PRINCIPAL",
-    title: "First all-school assembly Friday morning",
-    body: "Arrive by 8:10 AM sharp — gymnasium doors close for the semester-opening assembly.",
-    date: "2026-09-02T04:00:00Z",
+    title: "Spirit Week theme voting closes today",
+    body: "Cast your vote for Homecoming Spirit Week themes at the Commons table before the last bell — winning themes go live Monday.",
+    date: "2026-09-11T03:00:00Z",
   },
   {
     author: "Coach Parker",
     role: "ATHLETICS",
-    title: "KAIAC fall season practice schedule posted",
-    body: "Volleyball and cross country practice times are live on the Athletics page; tryout results go out Thursday.",
-    date: "2026-08-31T06:00:00Z",
+    title: "Volleyball and soccer sweep KAIAC openers",
+    body: "Varsity volleyball topped SIS in four sets Tuesday, and both boys' and girls' soccer opened league play with wins — box scores on the Athletics page.",
+    date: "2026-09-09T08:00:00Z",
+  },
+  {
+    author: "College Counseling",
+    role: "FACULTY",
+    title: "PSAT registration closes next Friday",
+    body: "Sophomores and juniors sitting the October PSAT must register with the counseling office by Sept 19; seniors, book your fall parent-teacher conference slot this week.",
+    date: "2026-09-08T05:00:00Z",
   },
 ];
 

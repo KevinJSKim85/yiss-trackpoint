@@ -23,6 +23,14 @@ export const revalidate = 900;
 
 const FETCH_TIMEOUT_MS = 15000;
 
+// YISS's "Athletics" category (last candidate above) always returns 200,
+// but it only reflects whatever the school last posted — sometimes months
+// stale (e.g. spring-season recaps sitting untouched over a school break).
+// Treat a candidate whose newest item is older than this as effectively
+// empty so the loop falls through to the current-season mock instead of
+// surfacing out-of-season content.
+const MAX_LIVE_ITEM_AGE_MS = 21 * 24 * 60 * 60 * 1000;
+
 type Kind = "recap" | "schedule" | "announcement";
 
 type AthleticsItem = {
@@ -82,6 +90,16 @@ function mockItems(): AthleticsItem[] {
     },
     {
       id: "mock-2",
+      title: "Girls' Soccer def. TCIS 2-0 in KAIAC Opener",
+      excerpt:
+        "Guardians varsity girls' soccer opened league play with a clean-sheet win over TCIS.",
+      url: `${SITE_ORIGIN}/student-life/athletics`,
+      thumbnail: null,
+      published: new Date(now - 1.5 * day).toISOString(),
+      kind: "recap",
+    },
+    {
+      id: "mock-3",
       title: "Volleyball (V) def. TCIS 3-1 in Home Opener",
       excerpt:
         "Guardians varsity volleyball opened KAIAC play with a straight-sets win over TCIS.",
@@ -91,7 +109,17 @@ function mockItems(): AthleticsItem[] {
       kind: "recap",
     },
     {
-      id: "mock-3",
+      id: "mock-4",
+      title: "Boys' Soccer and Tennis Both Open KAIAC Play This Week",
+      excerpt:
+        "Varsity boys' soccer and the tennis team both begin conference matches this week — schedules posted on the Athletics page.",
+      url: `${SITE_ORIGIN}/student-life/athletics`,
+      thumbnail: null,
+      published: new Date(now - 3 * day).toISOString(),
+      kind: "schedule",
+    },
+    {
+      id: "mock-5",
       title: "Cross Country Takes 2nd at KAIAC Invitational",
       excerpt:
         "The Guardians cross country team finished second overall at the KAIAC Invitational meet.",
@@ -101,7 +129,7 @@ function mockItems(): AthleticsItem[] {
       kind: "recap",
     },
     {
-      id: "mock-4",
+      id: "mock-6",
       title: "Athletics Booster Club Meeting Announcement",
       excerpt:
         "Parents and guardians are invited to the next Athletics Booster Club meeting in the library.",
@@ -164,6 +192,11 @@ export async function GET() {
               new Date(b.published).getTime() - new Date(a.published).getTime(),
           )
           .slice(0, 6);
+
+        const newest = items[0]
+          ? new Date(items[0].published).getTime()
+          : 0;
+        if (Date.now() - newest > MAX_LIVE_ITEM_AGE_MS) continue;
 
         return NextResponse.json({ items, source: url });
       } catch {
